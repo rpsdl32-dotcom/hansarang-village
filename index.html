@@ -1,4 +1,4 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no"><style>html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#1b2440;}</style></head><body><title>한사랑 마을</title>
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="한사랑 마을"><meta name="theme-color" content="#1b2440"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no"><style>html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#1b2440;}</style></head><body><title>한사랑 마을</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -280,6 +280,11 @@ body.touch .kbd-only { display: none; }
   .p-field { font-size: 14px; }
   .p-photo figcaption { font-size: 13px; }
   .p-link { font-size: 16px; }
+  #side { width: auto; max-width: 62vw; }
+  #side .btn { white-space: nowrap; font-size: 14px; padding: 7px 11px; min-height: 36px; }
+  #side > .row:first-child { flex-wrap: nowrap; gap: 5px; }
+  #side .chip, #side [id^=net] { white-space: nowrap; }
+  #minimap { width: 128px; height: 78px; }
 }
 @media (prefers-reduced-motion: reduce) { #panel, #fade, #zone { transition: none; } .pop { animation-duration: 0.01s; } #flash.on { animation: none; } }
 </style>
