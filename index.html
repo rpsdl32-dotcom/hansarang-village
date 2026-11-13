@@ -736,6 +736,7 @@ window.addEventListener("error", function (e) {
   function floorAt(x, z, y) {
     if (x > CAFE2.sx0 && x < CAFE2.sx1 && z > CAFE2.sz0 && z < CAFE2.sz1) return CAFE2.y * clamp((CAFE2.sz1 - z) / (CAFE2.sz1 - CAFE2.sz0), 0, 1);
     if (y > 2.0 && x > CAFE2.sx0 - 0.05 && x < CAFE2.x1 && z > CAFE2.z0 && z < CAFE2.z1) return CAFE2.y;
+    if (y > 2.0 && x > CF.x0 + 0.25 && x < CF.x1 - 0.25 && z >= CAFE2.z1 - 0.01 && z < CF.z1 - 0.2) return CAFE2.y; // 2F balcony on the 1F roof
     if (y > 5.5 && x > 9.95 && x < 21.65 && z > -19.65 && z < -7.35) return Y3;
     return groundH(x, z);
   }
@@ -1365,7 +1366,7 @@ window.addEventListener("error", function (e) {
     for (k = 0; k < 1400; k++) { g.fillStyle = r() < 0.6 ? "rgba(50,52,55,0.18)" : "rgba(230,232,234,0.14)"; g.fillRect(r() * w, r() * h, 1.3, 1.3); }
     for (k = 0; k < 4; k++) { var hx = (k % 2 + 0.5) * w / 2, hy = (Math.floor(k / 2) + 0.5) * h / 2; g.fillStyle = "rgba(60,62,65,0.45)"; g.beginPath(); g.arc(hx, hy, 4, 0, 6.3); g.fill(); g.fillStyle = "rgba(200,200,200,0.2)"; g.beginPath(); g.arc(hx - 1, hy - 1, 2, 0, 6.3); g.fill(); }
   }), roughness: 0.82 });
-  wall("x", C2.z1, C2.x0, C2.x1, C2.y0, C2.y0 + C2.h, 0.2, +1, M.stucco, M_conc, null, 3);
+  wall("x", C2.z1, C2.x0, C2.x1, C2.y0, C2.y0 + C2.h, 0.2, +1, M.stucco, M_conc, [{ a: -27.6, b: -26.5, top: C2.y0 + 2.25 }], 3); // balcony door
   wall("x", C2.z0, C2.x0, C2.x1, C2.y0, C2.y0 + C2.h, 0.2, -1, M.stucco, M_conc, null, 3);
   wall("z", C2.x0, C2.z0, C2.z1, C2.y0, C2.y0 + C2.h, 0.2, -1, M.stucco, M_conc, null, 3);
   wall("z", C2.x1, C2.z0, C2.z1, C2.y0, C2.y0 + C2.h, 0.2, +1, M.stucco, M_conc, null, 3);
@@ -1618,7 +1619,7 @@ window.addEventListener("error", function (e) {
     branch(x, y, z, 2.4 * s, 0.16 * s, 0, 0.05, 3);
     addCircle(x, z, 0.25);
   }
-  bareTree(-19.3, 2.9, 1.0); /* moved off the cafe porch, to the right of the building like the photo */ bareTree(-8.6, -4.6, 0.9); bareTree(22.6, -3.2, 0.9);
+  bareTree(-23.0, 2.7, 1.15); /* moved off the cafe porch, to the right of the building like the photo */ bareTree(-8.6, -4.6, 0.9); bareTree(22.6, -3.2, 0.9);
   function cypress(x, z, s) { var y = groundH(x, z); var m = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 10), std(0x2b4a2c, { roughness: 1 })); m.position.set(x, y + 2.6 * s, z); m.scale.set(1.3 * s, 2.8 * s, 1.3 * s); m.castShadow = true; scene.add(m); addCircle(x, z, 1.1 * s); }
   cypress(-35, -2, 1.0); cypress(-34.2, -6.5, 1.15); cypress(-36.5, 2.5, 0.9); cypress(-37.5, -10, 1.1); cypress(24.5, -10, 0.9);
   // pine forest (instanced)
@@ -5083,11 +5084,26 @@ window.addEventListener("error", function (e) {
     var lampM = std(0x16181b, { roughness: 0.4, metalness: 0.5 }), globeM = std(0xffffff, { emissive: 0xffe2a8, emissiveIntensity: 0.0, roughness: 0.3 });
     var globes = [];
     [[-34.6, 3.9], [-29.0, -8.6], [-19.6, 3.2]].forEach(function (p) { cyl(p[0], 1.6, p[1], 0.07, 0.1, 3.2, lampM, 8); box(p[0], 3.25, p[1], 0.9, 0.06, 0.06, lampM, { cast: false }); [-0.42, 0.42].forEach(function (o) { var gl = new THREE.Mesh(new THREE.SphereGeometry(0.17, 12, 10), globeM); gl.position.set(p[0] + o, 3.0, p[1]); scene.add(gl); globes.push(gl); cyl(p[0] + o, 3.2, p[1], 0.12, 0.2, 0.12, lampM, 10, { cast: false }); }); addCircle(p[0], p[1], 0.2); });
+    // 2F front wall collider: split it so the balcony door is passable
+    for (var ci = colliders.rects.length - 1; ci >= 0; ci--) { var r = colliders.rects[ci]; if (r.lv === 1 && r.x1 - r.x0 > 5 && Math.abs(r.z0 - (C2.z1 - 0.2)) < 0.05) { var dA = -27.6 + DX, dB = -26.5 + DX; colliders.rects.push({ x0: r.x0, x1: dA, z0: r.z0, z1: r.z1, lv: 1 }); colliders.rects.push({ x0: dB, x1: r.x1, z0: r.z0, z1: r.z1, lv: 1 }); colliders.rects.splice(ci, 1); } }
+    // balcony rails as colliders (upper level only) + open glass door leaf + dark fascia around the 2F roof
+    colliders.rects.push({ x0: CF.x0, x1: CF.x1, z0: CF.z1 - 0.3, z1: CF.z1 - 0.05, lv: 1 }, { x0: CF.x0, x1: CF.x0 + 0.2, z0: C2.z1, z1: CF.z1, lv: 1 }, { x0: CF.x1 - 0.2, x1: CF.x1, z0: C2.z1, z1: CF.z1, lv: 1 });
+    var dx0 = -27.6 + DX, frameM = std(0x1a1a1a, { roughness: 0.4 });
+    box(dx0 - 0.04, C2.y0 + 1.12, C2.z1 + 0.02, 0.08, 2.25, 0.22, frameM, { cast: false }); box(dx0 + 1.14, C2.y0 + 1.12, C2.z1 + 0.02, 0.08, 2.25, 0.22, frameM, { cast: false }); box(dx0 + 0.55, C2.y0 + 2.28, C2.z1 + 0.02, 1.2, 0.08, 0.22, frameM, { cast: false });
+    var leaf = new THREE.Group(); leaf.position.set(dx0 + 1.1, C2.y0, C2.z1 + 0.12); leaf.rotation.y = -1.25; scene.add(leaf);
+    var lg = new THREE.Mesh(new THREE.BoxGeometry(1.05, 2.15, 0.03), new THREE.MeshStandardMaterial({ color: 0x9ec4d8, transparent: true, opacity: 0.35, roughness: 0.1 })); lg.position.set(-0.53, 1.08, 0); leaf.add(lg);
+    var lf = new THREE.Mesh(new THREE.BoxGeometry(1.09, 2.19, 0.05), frameM); lf.position.set(-0.53, 1.08, -0.01); lf.scale.set(1, 1, 0.5); leaf.add(lf); lf.material = frameM; lg.renderOrder = 2;
+    var top2 = C2.y0 + C2.h;
+    box((C2.x0 + C2.x1) / 2, top2 + 0.05, C2.z1 + 0.12, C2.x1 - C2.x0 + 0.5, 0.3, 0.12, frameM, { cast: false }); box((C2.x0 + C2.x1) / 2, top2 + 0.05, C2.z0 - 0.12, C2.x1 - C2.x0 + 0.5, 0.3, 0.12, frameM, { cast: false });
+    box((CF.x0 + CF.x1) / 2, CF.h + 0.12, CF.z1 + 0.06, CF.x1 - CF.x0 + 0.1, 0.5, 0.12, std(0xf4f3ef, { roughness: 0.8 }), { cast: false });
+    // a few outdoor chairs on the balcony
+    [[-29.0, -0.6], [-23.9, -0.8]].forEach(function (p) { var cx = p[0] + DX; box(cx, CAFE2.y + 0.45, p[1], 0.45, 0.05, 0.45, std(0xd86a7a, { roughness: 0.6 }), { cast: false }); box(cx, CAFE2.y + 0.72, p[1] - 0.2, 0.45, 0.5, 0.05, std(0xd86a7a, { roughness: 0.6 }), { cast: false }); colliders.circles.push({ x: cx, z: p[1], r: 0.3, lv: 1 }); });
     // 1F-roof balcony: black rail along the front, like the night photo
     var railY = CF.h + 0.3;
     box((CF.x0 + CF.x1) / 2, railY + 1.0, CF.z1 - 0.15, CF.x1 - CF.x0 - 0.2, 0.05, 0.05, lampM, { cast: false });
     box((CF.x0 + CF.x1) / 2, railY + 0.55, CF.z1 - 0.15, CF.x1 - CF.x0 - 0.2, 0.03, 0.03, lampM, { cast: false });
     for (var rx = CF.x0 + 0.2; rx <= CF.x1 - 0.2; rx += 1.8) box(rx, railY + 0.5, CF.z1 - 0.15, 0.05, 1.0, 0.05, lampM, { cast: false });
+    [CF.x0 + 0.12, CF.x1 - 0.12].forEach(function (x) { box(x, railY + 1.0, (C2.z1 + CF.z1) / 2, 0.05, 0.05, CF.z1 - C2.z1, lampM, { cast: false }); box(x, railY + 0.5, CF.z1 - 0.15, 0.05, 1.0, 0.05, lampM, { cast: false }); });
     // ---- night look: warm interior glow behind the glass, wall sconces, brighter lamps
     var warm = new THREE.MeshBasicMaterial({ color: 0xffcf8a, transparent: true, opacity: 0.0, depthWrite: false });
     var glows = [];
