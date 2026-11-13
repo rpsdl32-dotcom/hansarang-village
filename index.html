@@ -224,6 +224,7 @@ ol.tl .s { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: 
 .drink:hover { border-color: var(--blue); }
 .drink b { font-size: 14px; }
 .drink span { font-size: 11.5px; color: var(--muted); }
+.drink-pic { display: block; width: 100%; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 4px; margin: 0 0 6px; background: #eadcc8; }
 .p-link { display: inline-block; margin: 0 0 16px; color: var(--blue); font-weight: 600; font-size: 14px; }
 
 #intro { position: fixed; inset: 0; z-index: 5; display: grid; place-items: center; background: rgba(10,16,32,0.55); padding: 16px; box-sizing: border-box; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
@@ -1307,7 +1308,26 @@ window.addEventListener("error", function (e) {
   box(-25.5, 3.0, CF.z1 - 0.1, 3.3, 0.8, 0.3, M.white, { occ: true });
   slidingDoor(-25.5, CF.z1 - 0.1, 2.9);
   // white planter blocks flanking the door, benches on the terrace
-  [-28.2, -22.8].forEach(function (x) { box(x, 0.4, 1.3, 0.9, 0.8, 0.6, M.white, { col: true });  });
+  (function cafeFrontPhoto() { // from the terrace photo: white baluster railings beside 4 entrance steps, black window frames, white brick pillars, steel bench-platform
+    var blk = std(0x1c1c1c, { roughness: 0.4 }), wb = std(0xf6f4ef, { roughness: 0.85 }), stone = std(0xb9b6b0, { roughness: 0.9 });
+    // entrance steps (shallow so walking stays smooth) + landing
+    for (var i = 0; i < 4; i++) box(-25.5, 0.05 + i * 0.0, CF.z1 + 0.25 + i * 0.32, 2.6, 0.1 - i * 0.02, 0.32, i % 2 ? stone : std(0xc4c1ba, { roughness: 0.9 }), { cast: false });
+    // baluster railings: base, cap, posts, vase-shaped balusters
+    [-27.15, -23.85].forEach(function (x) {
+      box(x, 0.12, CF.z1 + 0.85, 0.42, 0.24, 1.5, wb, { col: true }); box(x, 0.9, CF.z1 + 0.85, 0.46, 0.12, 1.56, wb);
+      box(x, 0.5, CF.z1 + 1.62, 0.42, 1.0, 0.36, wb); box(x, 1.04, CF.z1 + 1.62, 0.48, 0.08, 0.42, wb);
+      for (var k = 0; k < 4; k++) { var z = CF.z1 + 0.32 + k * 0.32; cyl(x, 0.52, z, 0.07, 0.11, 0.56, wb, 10, { cast: false }); var bb = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), wb); bb.position.set(x, 0.42, z); scene.add(bb); }
+    });
+    // black window frames: transom + extra mullions on both glass bays (4 panes each, like the photo)
+    frontBays.forEach(function (b) { var w = b[1] - b[0]; box((b[0] + b[1]) / 2, 0.98, CF.z1 - 0.06, w, 0.06, 0.08, blk, { cast: false }); [0.25, 0.75].forEach(function (f) { box(b[0] + w * f, 1.8, CF.z1 - 0.06, 0.05, 2.6, 0.08, blk, { cast: false }); }); });
+    // white painted brick on the pillars (thin mortar lines)
+    var brick = std(0xffffff, { roughness: 0.9, map: canvasTex(64, 256, function (g, w, h) { g.fillStyle = "#f5f3ee"; g.fillRect(0, 0, w, h); g.fillStyle = "rgba(150,145,135,.45)"; for (var y = 0; y < h; y += 12) { g.fillRect(0, y, w, 1.5); var off = (y / 12) % 2 ? 0 : w / 2; g.fillRect(off, y, 1.5, 12); } }) });
+    [-30.95, -27.3, -23.7, -20.05].forEach(function (x) { box(x, 1.7, CF.z1 + 0.02, 0.34, 3.4, 0.08, brick, { cast: false }); });
+    // steel bench-platform on the right of the porch
+    box(-21.4, 0.62, CF.z1 + 0.9, 2.4, 0.06, 0.9, std(0x8a8d90, { roughness: 0.5, metalness: 0.4 }));
+    [[-22.5, 0.55], [-20.3, 0.55], [-22.5, 1.25], [-20.3, 1.25]].forEach(function (o) { box(o[0], 0.3, CF.z1 + o[1], 0.06, 0.6, 0.06, std(0x7a8288, { metalness: 0.5, roughness: 0.4 }), { cast: false }); });
+    addRect(-22.6, -20.2, CF.z1 + 0.45, CF.z1 + 1.35);
+  })();
   [[-30, 3.0], [-21.2, 3.0]].forEach(function (p) { box(p[0], 0.45, p[1], 1.6, 0.08, 0.5, M.darkWood); box(p[0], 0.22, p[1], 1.5, 0.44, 0.08, M.metal); addRect(p[0] - 0.8, p[0] + 0.8, p[1] - 0.3, p[1] + 0.3); });
   // floor slab / balcony
   (function () { var y = CF.h + 0.15, zA = CF.z0 - 0.15, zB = CF.z1 + 0.15, xA = CF.x0 - 0.15, xB = CF.x1 + 0.15;
@@ -1399,7 +1419,7 @@ window.addEventListener("error", function (e) {
     [[0.65, 0], [-0.65, 0]].forEach(function (o) { var cx = x + o[0], cz = z + o[1]; box(cx, 0.45, cz, 0.42, 0.05, 0.42, M.darkWood); box(cx + (o[0] > 0 ? 0.2 : -0.2), 0.72, cz, 0.04, 0.5, 0.42, M.darkWood); });
     addCircle(x, z, 0.85);
   }
-  cafeTable(-27.3, -0.9); cafeTable(-25.0, -1.0); cafeTable(-27.2, -3.6);
+  cafeTable(-27.2, -3.7); cafeTable(-23.3, -3.5); // door (x -27..-24) kept clear
   // window bar facing the terrace
   box(-22.0, 1.0, CI.z1 - 0.32, 3.3, 0.06, 0.5, M.darkWood);
   [-23.1, -22.0, -20.9].forEach(function (x) { cyl(x, 0.35, CI.z1 - 0.95, 0.04, 0.04, 0.7, M.metal, 6); cyl(x, 0.72, CI.z1 - 0.95, 0.2, 0.2, 0.06, M.darkWood, 14); });
@@ -1465,6 +1485,14 @@ window.addEventListener("error", function (e) {
     COL_LV = 1;
     box(ix1 - 0.25, Y + 1.0, -4.6, 0.45, 0.05, 3.4, std(0x9a6a3a, { roughness: 0.45 }), { col: true });
     [-5.8, -4.6, -3.4].forEach(function (z) { cyl(ix1 - 0.75, Y + 0.38, z, 0.025, 0.025, 0.76, blackM, 6, { cast: false }); var st = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.07, 14), std(0xb08a62, { roughness: 0.7 })); st.position.set(ix1 - 0.75, Y + 0.78, z); scene.add(st); box(ix1 - 0.93, Y + 1.0, z, 0.04, 0.35, 0.36, std(0xb08a62, { roughness: 0.7 }), { cast: false }); addCircle(ix1 - 0.75, z, 0.22); });
+    (function cafe2Seats() { // 2F seating: wood tables + cushioned chairs (layout estimated)
+      var wood = std(0xc9a06a, { roughness: 0.45 }), seatM = std(0x6b4a33, { roughness: 0.6 }), cush = std(0xe8d8bf, { roughness: 0.95 });
+      function chair(x, z, face) { box(x, Y + 0.45, z, 0.42, 0.05, 0.42, seatM, { cast: false }); box(x, Y + 0.49, z, 0.36, 0.04, 0.36, cush, { cast: false }); box(x - Math.sin(face) * 0.2, Y + 0.74, z - Math.cos(face) * 0.2, Math.abs(Math.cos(face)) * 0.38 + 0.04, 0.5, Math.abs(Math.sin(face)) * 0.38 + 0.04, seatM, { cast: false }); [[-0.17, -0.17], [0.17, -0.17], [-0.17, 0.17], [0.17, 0.17]].forEach(function (o) { box(x + o[0], Y + 0.22, z + o[1], 0.04, 0.44, 0.04, blackM, { cast: false }); }); }
+      function round(x, z) { cyl(x, Y + 0.37, z, 0.05, 0.05, 0.74, blackM, 8, { cast: false }); cyl(x, Y + 0.75, z, 0.42, 0.42, 0.05, wood, 20); cyl(x, Y + 0.02, z, 0.24, 0.24, 0.04, blackM, 12, { cast: false }); chair(x - 0.62, z, Math.PI / 2); chair(x + 0.62, z, -Math.PI / 2); addCircle(x, z, 0.75); }
+      round(-26.4, -3.6); round(-25.8, -5.6); // stair landing (x<-27, z<-6.2) kept clear
+      // warm pendant over each table
+      [[-26.4, -3.6], [-25.8, -5.6]].forEach(function (p) { cyl(p[0], Y + 2.1, p[1], 0.18, 0.08, 0.18, std(0x2a2a2a, { roughness: 0.4 }), 14, { cast: false }); var b = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), M_b2); b.position.set(p[0], Y + 1.98, p[1]); scene.add(b); box(p[0], Y + 2.5, p[1], 0.01, 0.8, 0.01, blackM, { cast: false }); });
+    })();
     // 2F walls + stair-hole rail (only on the upper level)
     addRect(C2.x0 - 0.1, C2.x1 + 0.1, iz0 - 0.15, iz0); addRect(C2.x0 - 0.1, C2.x1 + 0.1, iz1, iz1 + 0.15);
     addRect(ix0 - 0.15, ix0, C2.z0, C2.z1); addRect(ix1, ix1 + 0.15, C2.z0, C2.z1);
@@ -5330,7 +5358,7 @@ window.addEventListener("error", function (e) {
       add(el("p", "p-sum", "고르시면 바리스타가 바로 만들어 드려요. 게임 속 주문이라 결제는 없습니다."));
       photo(PHOTO.cafe, "아셀카페 앞 테라스");
       var grid = add(el("div", "drinks"));
-      DRINKS.forEach(function (d) { var b = el("button", "drink"); b.type = "button"; b.appendChild(el("b", null, d.n)); b.appendChild(el("span", null, d.d)); b.addEventListener("click", function () { orderDrink(d); }); grid.appendChild(b); });
+      DRINKS.forEach(function (d) { var b = el("button", "drink"); b.type = "button"; var im = document.createElement("img"); im.className = "drink-pic"; im.alt = d.n + " 그림"; im.src = drinkPic(d); b.appendChild(im); b.appendChild(el("b", null, d.n)); b.appendChild(el("span", null, d.d)); b.addEventListener("click", function () { orderDrink(d); }); grid.appendChild(b); });
     }
     if (EXTRA_PANELS[kind]) EXTRA_PANELS[kind](add, rows, photo);
     panelBody.scrollTop = 0;
@@ -5339,6 +5367,40 @@ window.addEventListener("error", function (e) {
   function closePanel() { panel.classList.remove("open"); panelOpen = false; document.body.classList.remove("panel-open"); if (mode === "avatar") { G.made = true; saveG(); exitMode(); } updateAct(); }
   $("#p-close").addEventListener("click", closePanel);
   var brewing = 0, drinkName = "";
+  var DRINK_PIC = {};
+  // a painted "menu photo" of each drink: cup on a wooden table with soft light (illustration, not a real photo)
+  function drinkPic(d) {
+    if (DRINK_PIC[d.n]) return DRINK_PIC[d.n];
+    var c = document.createElement("canvas"); c.width = 240; c.height = 160; var g = c.getContext("2d");
+    function hex(n, a) { var r = (n >> 16) & 255, gg = (n >> 8) & 255, b = n & 255; return "rgba(" + r + "," + gg + "," + b + "," + (a == null ? 1 : a) + ")"; }
+    var bg = g.createLinearGradient(0, 0, 0, 160); bg.addColorStop(0, "#f4e9da"); bg.addColorStop(0.62, "#e6d3bc"); bg.addColorStop(0.63, "#9a6b45"); bg.addColorStop(1, "#6e4a30"); g.fillStyle = bg; g.fillRect(0, 0, 240, 160);
+    var glow = g.createRadialGradient(70, 30, 5, 70, 30, 140); glow.addColorStop(0, "rgba(255,250,235,.8)"); glow.addColorStop(1, "rgba(255,250,235,0)"); g.fillStyle = glow; g.fillRect(0, 0, 240, 160);
+    for (var k = 0; k < 6; k++) { g.strokeStyle = "rgba(60,36,20,.18)"; g.beginPath(); g.moveTo(0, 104 + k * 9); g.bezierCurveTo(80, 100 + k * 9, 160, 110 + k * 9, 240, 103 + k * 9); g.stroke(); }
+    g.fillStyle = "rgba(40,24,12,.28)"; g.beginPath(); g.ellipse(124, 138, 58, 10, 0, 0, 6.3); g.fill();
+    var cx = 120, liquid = d.c, kind = d.k === "mystery" ? "hot" : d.k;
+    if (kind === "hot") {
+      g.fillStyle = "#f7f4ee"; g.beginPath(); g.ellipse(cx, 136, 54, 11, 0, 0, 6.3); g.fill(); // saucer
+      var cup = g.createLinearGradient(cx - 40, 0, cx + 40, 0); cup.addColorStop(0, "#d9d4ca"); cup.addColorStop(0.35, "#ffffff"); cup.addColorStop(1, "#cfc9bd"); g.fillStyle = cup;
+      g.beginPath(); g.moveTo(cx - 40, 82); g.lineTo(cx + 40, 82); g.quadraticCurveTo(cx + 36, 132, cx, 132); g.quadraticCurveTo(cx - 36, 132, cx - 40, 82); g.fill();
+      g.strokeStyle = "#e9e4da"; g.lineWidth = 7; g.beginPath(); g.arc(cx + 44, 102, 12, -1.3, 1.3); g.stroke();
+      g.fillStyle = hex(liquid); g.beginPath(); g.ellipse(cx, 83, 38, 9, 0, 0, 6.3); g.fill();
+      if (/라떼|추천/.test(d.n)) { g.fillStyle = "rgba(250,240,225,.92)"; g.beginPath(); g.moveTo(cx, 90); g.bezierCurveTo(cx - 20, 82, cx - 12, 74, cx, 81); g.bezierCurveTo(cx + 12, 74, cx + 20, 82, cx, 90); g.fill(); }
+      else { g.fillStyle = "rgba(200,150,90,.45)"; g.beginPath(); g.ellipse(cx - 6, 82, 22, 4, 0, 0, 6.3); g.fill(); }
+      g.strokeStyle = "rgba(255,255,255,.55)"; g.lineWidth = 2.5; for (var sp = -1; sp <= 1; sp++) { g.beginPath(); g.moveTo(cx + sp * 12, 70); g.bezierCurveTo(cx + sp * 12 - 8, 58, cx + sp * 12 + 8, 50, cx + sp * 12, 38); g.stroke(); }
+    } else {
+      var top = d.k === "cream" ? 56 : 44, bot = 134, wt = 34, wb = 26;
+      g.fillStyle = hex(liquid); g.beginPath(); g.moveTo(cx - wt + 3, top + 14); g.lineTo(cx + wt - 3, top + 14); g.lineTo(cx + wb - 3, bot - 3); g.lineTo(cx - wb + 3, bot - 3); g.fill();
+      if (d.layer) { var lg = g.createLinearGradient(0, top + 14, 0, bot); lg.addColorStop(0, hex(d.layer, 0.95)); lg.addColorStop(0.45, hex(d.layer, 0.5)); lg.addColorStop(1, hex(liquid, 0)); g.fillStyle = lg; g.fill(); }
+      if (kind === "ice") { g.fillStyle = "rgba(255,255,255,.45)"; [[-14, 30], [6, 24], [-4, 46], [14, 42]].forEach(function (o) { g.fillRect(cx + o[0], top + o[1], 13, 12); }); }
+      var gl = g.createLinearGradient(cx - wt, 0, cx + wt, 0); gl.addColorStop(0, "rgba(255,255,255,.35)"); gl.addColorStop(0.25, "rgba(255,255,255,.05)"); gl.addColorStop(0.8, "rgba(255,255,255,.12)"); gl.addColorStop(1, "rgba(255,255,255,.4)");
+      g.fillStyle = gl; g.strokeStyle = "rgba(255,255,255,.8)"; g.lineWidth = 1.5; g.beginPath(); g.moveTo(cx - wt, top); g.lineTo(cx + wt, top); g.lineTo(cx + wb, bot); g.lineTo(cx - wb, bot); g.closePath(); g.fill(); g.stroke();
+      if (d.k === "cream") { g.fillStyle = "#fffaf2"; for (var q = 0; q < 4; q++) { g.beginPath(); g.ellipse(cx, top - q * 9, 32 - q * 7, 9, 0, 0, 6.3); g.fill(); } if (d.drizzle) { g.strokeStyle = hex(d.drizzle); g.lineWidth = 2.5; g.beginPath(); g.moveTo(cx - 24, top - 4); g.lineTo(cx + 18, top - 12); g.lineTo(cx - 12, top - 20); g.lineTo(cx + 8, top - 26); g.stroke(); } }
+      if (d.straw) { g.strokeStyle = hex(d.straw); g.lineWidth = 6; g.lineCap = "round"; g.beginPath(); g.moveTo(cx + 8, bot - 20); g.lineTo(cx + 22, top - 30); g.stroke(); }
+      if (d.tea) { g.fillStyle = "rgba(255,230,140,.8)"; g.beginPath(); g.arc(cx - 8, top + 34, 6, 0, 6.3); g.fill(); }
+    }
+    if (d.k === "mystery") { g.fillStyle = "rgba(255,255,255,.9)"; g.font = '700 40px "IBM Plex Sans KR", sans-serif'; g.textAlign = "center"; g.fillText("?", cx, 58); }
+    return (DRINK_PIC[d.n] = c.toDataURL("image/jpeg", 0.85));
+  }
   function orderDrink(d) {
     closePanel(); stamp("cafe"); mission("cafe");
     toast("주문 접수", d.n + " 준비하고 있어요.");
