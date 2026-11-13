@@ -2783,12 +2783,16 @@ window.addEventListener("error", function (e) {
   var bgmTick = 0;
   // OLSC song: plays while you are in the OLSC sports centre or on the OLSC pitch (file uploaded by the church)
   var OLSC_MUSIC = { inside: false, el: null, vol: 0, failed: false };
-  function olscEl() { if (!OLSC_MUSIC.el) { var a = new Audio("olsc-song.mp3"); a.loop = true; a.preload = "auto"; a.volume = 0; a.addEventListener("error", function () { OLSC_MUSIC.failed = true; }); OLSC_MUSIC.el = a; } return OLSC_MUSIC.el; }
+  OLSC_MUSIC.track = ""; OLSC_MUSIC.bad = {};
+  function olscEl(src) { src = src || "olsc-song.mp3"; if (OLSC_MUSIC.el && OLSC_MUSIC.track !== src) { try { OLSC_MUSIC.el.pause(); } catch (e) { /* ignore */ } OLSC_MUSIC.el = null; } if (!OLSC_MUSIC.el) { var a = new Audio(src); a.loop = true; a.preload = "auto"; a.volume = 0; a.addEventListener("error", function () { OLSC_MUSIC.bad[src] = true; }); OLSC_MUSIC.el = a; OLSC_MUSIC.track = src; OLSC_MUSIC.vol = 0; } return OLSC_MUSIC.el; }
   tickers.push(function (dt) {
     dt = dt || 0.016;
-    var want = started && bgmOn && !OLSC_MUSIC.failed && !!curZone && (curZone.id === "olscz" || curZone.id === "pitch") && mode !== "worship" && !(typeof myPraise !== "undefined" && myPraise);
-    if (want && !OLSC_MUSIC.inside) { OLSC_MUSIC.inside = true; if (Synth.running()) Synth.stop(); var a = olscEl(); var pr = a.play(); if (pr && pr.catch) pr.catch(function () {}); toast("OLSC 노래", "OLSC에 오신 걸 환영해요 ⚽"); }
+    var inSanct = !!curZone && curZone.id === "sanct", inOlsc = !!curZone && (curZone.id === "olscz" || curZone.id === "pitch");
+    var src = inSanct ? "praise-song.mp3" : "olsc-song.mp3";
+    var want = started && bgmOn && !OLSC_MUSIC.bad[src] && (inSanct || (inOlsc && mode !== "worship")) && !(typeof myPraise !== "undefined" && myPraise);
+    if (want && (!OLSC_MUSIC.inside || OLSC_MUSIC.track !== src)) { OLSC_MUSIC.inside = true; OLSC_MUSIC.name = inSanct ? "본당 찬양" : "OLSC 노래"; if (Synth.running()) Synth.stop(); var a = olscEl(src); var pr = a.play(); if (pr && pr.catch) pr.catch(function () {}); toast(OLSC_MUSIC.name, inSanct ? "본당에 오신 걸 환영해요 🎵 찬양이 흘러나와요" : "OLSC에 오신 걸 환영해요 ⚽"); }
     else if (!want && OLSC_MUSIC.inside) { OLSC_MUSIC.inside = false; setTimeout(bgmResume, 1200); }
+    if (OLSC_MUSIC.inside && inSanct && Synth.running()) Synth.stop();
     if (!OLSC_MUSIC.el) return;
     var target = OLSC_MUSIC.inside ? 0.7 * Math.min(1, (typeof bgmVol === "number" ? bgmVol : 1) * 1.4) : 0;
     OLSC_MUSIC.vol += (target - OLSC_MUSIC.vol) * Math.min(1, dt * 1.5);
@@ -2854,7 +2858,7 @@ window.addEventListener("error", function (e) {
     pEl("p", "p-sum", "받은 주보는 장소 메뉴의 '주보 다시 보기'에서 언제든 열 수 있어요.");
   };
   EXTRA_PANELS.music = function () {
-    head("Music", "음악 설정", "지금 연주: " + (bgmOn ? (OLSC_MUSIC.inside ? "OLSC 노래" : (BGM_NAME[bgmStyle()] || "연주")) : "꺼짐"));
+    head("Music", "음악 설정", "지금 연주: " + (bgmOn ? (OLSC_MUSIC.inside ? (OLSC_MUSIC.name || "OLSC 노래") : (BGM_NAME[bgmStyle()] || "연주")) : "꺼짐"));
     bigBtn(bgmOn ? "배경음악 끄기" : "배경음악 켜기", function () { bgmOn = !bgmOn; document.getElementById("btn-bgm").setAttribute("aria-pressed", bgmOn ? "true" : "false"); if (bgmOn) bgmResume(); else if (mode !== "worship" && mode !== "cafe") Synth.stop(); reopen("music"); });
     var lab = pEl("label", "p-field", "음량"); var r = el("input"); r.type = "range"; r.min = "0"; r.max = "100"; r.value = String(Math.round(bgmVol * 100)); r.id = "vol-range"; r.addEventListener("input", function () { bgmVol = Number(r.value) / 100; Synth.setVol(inSanct ? bgmVol * 0.35 : bgmVol); if (inSanct) renderPraise(); }); lab.appendChild(r);
     pEl("p", "tl-title", "재생 모드");
@@ -4182,7 +4186,7 @@ window.addEventListener("error", function (e) {
     };
   })(bgmResume);
   EXTRA_PANELS.music = function (add, rows) {
-    var cur = OLSC_MUSIC.inside ? "OLSC 노래" : (bgmOn && Synth.running() ? (BGM_NAME[Synth.style()] || "연주") : "꺼짐");
+    var cur = OLSC_MUSIC.inside ? (OLSC_MUSIC.name || "OLSC 노래") : (bgmOn && Synth.running() ? (BGM_NAME[Synth.style()] || "연주") : "꺼짐");
     head("Music", "음악 플레이어", "지금 재생: " + cur);
     bigBtn(bgmOn ? "배경음악 끄기" : "배경음악 켜기", function () { bgmOn = !bgmOn; document.getElementById("btn-bgm").setAttribute("aria-pressed", bgmOn ? "true" : "false"); if (bgmOn) bgmResume(); else if (mode !== "worship" && mode !== "cafe") Synth.stop(); reopen("music"); });
     var l1 = pEl("label", "p-field", "배경음악 볼륨"), r1 = el("input"); r1.type = "range"; r1.min = "0"; r1.max = "100"; r1.value = String(Math.round(bgmVol * 100)); r1.addEventListener("input", function () { bgmVol = Number(r1.value) / 100; Synth.setVol(inSanct ? bgmVol * 0.35 : bgmVol); }); l1.appendChild(r1);
