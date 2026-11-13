@@ -257,6 +257,29 @@ body.touch .kbd-only { display: none; }
   #toast { top: calc(var(--pt) + 140px); }
   .c-title { font-size: 22px; }
 }
+/* phone readability: bigger text, stronger contrast, larger touch targets */
+@media (max-width: 640px), (pointer: coarse) and (max-height: 520px) {
+  .glass { background: rgba(18, 26, 44, 0.86); }
+  #menu { width: min(240px, calc(100% - 24px)); max-height: calc(100% - var(--pt) - 220px); padding: 8px; }
+  .menu-item { font-size: 16px; font-weight: 600; padding: 12px 10px; min-height: 46px; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
+  .menu-item small { font-size: 13px; opacity: 0.85; }
+  .chip { font-size: 13px; padding: 4px 12px; }
+  #act { font-size: 16px; padding: 12px 18px; }
+  #act kbd { font-size: 13px; }
+  #toast { font-size: 15px; }
+  #toast strong { font-size: 18px; }
+  #zone small { font-size: 13px; }
+  #chatbox { font-size: 15px; }
+  #panel { max-height: 78%; }
+  #panel h2 { font-size: 26px; }
+  .p-en { font-size: 13px; }
+  .p-sum { font-size: 16px; }
+  .p-body { font-size: 16px; line-height: 1.75; }
+  .p-btn { font-size: 16px; padding: 14px 12px; min-height: 48px; }
+  .p-field { font-size: 14px; }
+  .p-photo figcaption { font-size: 13px; }
+  .p-link { font-size: 16px; }
+}
 @media (prefers-reduced-motion: reduce) { #panel, #fade, #zone { transition: none; } .pop { animation-duration: 0.01s; } #flash.on { animation: none; } }
 </style>
 
