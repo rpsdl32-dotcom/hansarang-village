@@ -1619,7 +1619,7 @@ window.addEventListener("error", function (e) {
     branch(x, y, z, 2.4 * s, 0.16 * s, 0, 0.05, 3);
     addCircle(x, z, 0.25);
   }
-  bareTree(-23.0, 2.7, 1.15); /* moved off the cafe porch, to the right of the building like the photo */ bareTree(-8.6, -4.6, 0.9); bareTree(22.6, -3.2, 0.9);
+  /* cafe-front tree removed: it reached into the building (user request) */ /* moved off the cafe porch, to the right of the building like the photo */ bareTree(-8.6, -4.6, 0.9); bareTree(22.6, -3.2, 0.9);
   function cypress(x, z, s) { var y = groundH(x, z); var m = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 10), std(0x2b4a2c, { roughness: 1 })); m.position.set(x, y + 2.6 * s, z); m.scale.set(1.3 * s, 2.8 * s, 1.3 * s); m.castShadow = true; scene.add(m); addCircle(x, z, 1.1 * s); }
   cypress(-35, -2, 1.0); cypress(-34.2, -6.5, 1.15); cypress(-36.5, 2.5, 0.9); cypress(-37.5, -10, 1.1); cypress(24.5, -10, 0.9);
   // pine forest (instanced)
@@ -4447,11 +4447,11 @@ window.addEventListener("error", function (e) {
     teen: { who: "중고등부 선생님", pitch: 1.05, rate: 1.04 }, hiel: { who: "HIEL 리더", pitch: 1.0, rate: 1.06 }, foru: { who: "For U 리더", pitch: 1.15, rate: 1.04 }, olsc: { who: "OLSC 주장", pitch: 0.95, rate: 1.1 },
     goods: { who: "OLSC 매니저", pitch: 1.2, rate: 1.06 }, records: { who: "OLSC 매니저", pitch: 1.2, rate: 1.06 }, bbq: { who: "청년부 형", pitch: 0.9, rate: 1.05 }, guide: { who: "마을지기", pitch: 0.85, rate: 0.98 } } };
   try { VOICE.on = localStorage.getItem("hsv_voice") !== "0"; } catch (e) { /* ignore */ }
-  function pickKo() { if (!window.speechSynthesis) return null; var vs = speechSynthesis.getVoices() || []; for (var i = 0; i < vs.length; i++) if (/^ko/i.test(vs[i].lang)) return vs[i]; return null; }
+  function pickKo() { if (!window.speechSynthesis) return null; var vs = (speechSynthesis.getVoices() || []).filter(function (v) { return /^ko/i.test(v.lang); }); if (!vs.length) return null; var pref = [/yuna/i, /sora/i, /heami/i, /sunhi/i, /jimin/i, /seoyeon/i, /female|여성|여자/i, /google/i, /natural|premium|enhanced/i]; for (var k = 0; k < pref.length; k++) for (var i = 0; i < vs.length; i++) if (pref[k].test(vs[i].name) && !/male|남성|남자|minsu|injoon|hyunsu/i.test(vs[i].name.replace(/female/i, ""))) return vs[i]; return vs[0]; }
   if (window.speechSynthesis) { VOICE.ko = pickKo(); try { speechSynthesis.onvoiceschanged = function () { VOICE.ko = pickKo(); }; } catch (e) { /* ignore */ } }
   function npcSpeak(text, ch) {
     if (!VOICE.on || !window.speechSynthesis || !text) return;
-    try { speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(text.slice(0, 260)); u.lang = "ko-KR"; if (VOICE.ko) u.voice = VOICE.ko; u.pitch = ch.pitch; u.rate = ch.rate; u.volume = 0.95; speechSynthesis.speak(u); } catch (e) { /* ignore */ }
+    try { speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(text.slice(0, 260)); u.lang = "ko-KR"; if (VOICE.ko) u.voice = VOICE.ko; u.pitch = Math.max(0.95, Math.min(1.15, 1.0 + (ch.pitch - 1) * 0.3)); u.rate = Math.max(0.8, Math.min(0.92, ch.rate * 0.86)); u.volume = 0.95; speechSynthesis.speak(u); } catch (e) { /* ignore */ }
   }
   var openPanelBase = openPanel;
   openPanel = function (kind) {
@@ -4945,7 +4945,7 @@ window.addEventListener("error", function (e) {
   EXTRA_ACTIONS.pew = function () { var sp = PEWS.spot; if (!sp || !sp.seat) return; var s0 = sp.seat; fadeTo(function () { sitWorship(s0.x, s0.z); }); };
   // ---- world tour: a short camera flight over the main places, tap to stop
   var TOUR = { on: false, t: 0, eye: new THREE.Vector3(), tgt: new THREE.Vector3(), fx: null, stops: [
-    { e: [22, 18, 30], t: [0, 4, -8], n: "목포한사랑교회" }, { e: [-14, 9, 14], t: [-26, 2, -3], n: "아셀카페" },
+    { e: [22, 18, 30], t: [0, 4, -8], n: "목포한사랑교회" }, { e: [-19 + CAFE_DX, 9, 14], t: [-26 + CAFE_DX, 2, -3], n: "아셀카페" },
     { e: [-2, 24, -4], t: [-4, 6, -16], n: "본당 (2층)" }, { e: [8, 16, 96], t: [-6, 0, 75], n: "OLSC 축구장" },
     { e: [-40, 14, 12], t: [-62, 4, 36], n: "대화볼링장 · 신안인스빌" }, { e: [14, 20, 40], t: [0, 0, 10], n: "한사랑 마을" }] };
   function startTour() {
@@ -5389,8 +5389,8 @@ window.addEventListener("error", function (e) {
   function setSnow(v) {
     snowing = !!v; $("#btn-snow").setAttribute("aria-pressed", snowing ? "true" : "false");
     var col = terrainGeo.attributes.color; col.array.set(snowing ? tSnow : tCols); col.needsUpdate = true;
-    [M.concrete, M_conc2, M.turf].forEach(function (m) { m.color.setHex(snowing ? 0xdfe4ea : 0xffffff); });
-    [pc1, pc2, pc3].forEach(function (m) { m.material.color.setHex(snowing ? 0xd6dde0 : 0xffffff); });
+    [M.concrete, M_conc2, M.turf].forEach(function (m) { if (!m || !m.color) return; m.color.setHex(snowing ? 0xdfe4ea : 0xffffff); });
+    [pc1, pc2, pc3].forEach(function (m) { if (!m || !m.material || !m.material.color) return; m.material.color.setHex(snowing ? 0xd6dde0 : 0xffffff); });
     bgmRefresh();
   }
   $("#btn-snow").addEventListener("click", function () { setSnow(!snowing); });
@@ -5650,7 +5650,7 @@ window.addEventListener("error", function (e) {
     });
   }
   function resolve() {
-    var r = 0.36, i, c, nx, nz, ddx, ddz, d, plv = player.y > 2.0 && player.x < -19 && player.x > -32 && player.z < 1 && player.z > -9 ? 1 : (player.y > 5.5 && player.x > 9.6 && player.x < 22 && player.z > -20 && player.z < -7 ? 3 : 0);
+    var r = 0.36, i, c, nx, nz, ddx, ddz, d, plv = player.y > 2.0 && player.x < CF.x1 + 1 && player.x > CF.x0 - 1 && player.z < CF.z1 + 0.5 && player.z > CF.z0 - 1 ? 1 : (player.y > 5.5 && player.x > 9.6 && player.x < 22 && player.z > -20 && player.z < -7 ? 3 : 0);
     for (var pass = 0; pass < 2; pass++) {
       for (i = 0; i < colliders.rects.length; i++) {
         c = colliders.rects[i]; if (c.lv != null && c.lv !== plv) continue;
