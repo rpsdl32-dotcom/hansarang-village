@@ -4251,6 +4251,7 @@ window.addEventListener("error", function (e) {
     bigBtn(bgmOn ? "배경음악 끄기" : "배경음악 켜기", function () { bgmOn = !bgmOn; document.getElementById("btn-bgm").setAttribute("aria-pressed", bgmOn ? "true" : "false"); if (bgmOn) bgmResume(); else if (mode !== "worship" && mode !== "cafe") Synth.stop(); reopen("music"); });
     var l1 = pEl("label", "p-field", "배경음악 볼륨"), r1 = el("input"); r1.type = "range"; r1.min = "0"; r1.max = "100"; r1.value = String(Math.round(bgmVol * 100)); r1.addEventListener("input", function () { bgmVol = Number(r1.value) / 100; Synth.setVol(inSanct ? bgmVol * 0.35 : bgmVol); }); l1.appendChild(r1);
     var l2 = pEl("label", "p-field", "효과음 볼륨"), r2 = el("input"); r2.type = "range"; r2.min = "0"; r2.max = "100"; r2.value = String(Math.round(SFX.vol() * 100)); r2.addEventListener("input", function () { SFX.vol(Number(r2.value) / 100); }); r2.addEventListener("change", function () { SFX.play("coin"); }); l2.appendChild(r2);
+    bigBtn(VOICE.on ? "NPC 목소리 끄기" : "NPC 목소리 켜기", function () { VOICE.on = !VOICE.on; try { localStorage.setItem("hsv_voice", VOICE.on ? "1" : "0"); } catch (e) { /* ignore */ } if (!VOICE.on && window.speechSynthesis) speechSynthesis.cancel(); reopen("music"); });
     pEl("p", "tl-title", "곡 고르기");
     [["auto", "장소에 따라 자동 (신나는 음악)"], ["pop", BGM_NAME.pop], ["lofi", BGM_NAME.lofi], ["joy", BGM_NAME.joy], ["fest", BGM_NAME.fest], ["xmas", "크리스마스 캐럴"], ["hymn", "찬송가 피아노"]].forEach(function (m) { var b = bigBtn(m[1], function () { bgmMode = m[0]; bgmOn = true; bgmRefresh(); bgmResume(); reopen("music"); }); if (bgmMode === m[0]) b.classList.add("on"); });
     rows([["자동일 때", "마을 곳곳 신나는 팝 · 카페 로파이 · 본당 신나는 찬양 · 가을 축제 · 겨울 캐럴 · OLSC 구역 OLSC 노래"], ["음원", "OLSC 노래(교회 제공 파일)를 빼면 모두 이 페이지가 직접 연주해요. 찬송가·캐럴 선율은 저작권이 끝난 곡이에요."]]);
@@ -4373,21 +4374,22 @@ window.addEventListener("error", function (e) {
      ============================================================ */
   (function westBlock() {
     // ---- 대화볼링장: white square-tile facade, blue bands, red-framed glass, portholes, roof pin
-    var BW = { x0: -71, x1: -55, z0: 31, z1: 43, h: 10 }, by = groundH((BW.x0 + BW.x1) / 2, BW.z0), bcx = (BW.x0 + BW.x1) / 2, bcz = (BW.z0 + BW.z1) / 2;
+    var BW = { x0: -71, x1: -55, z0: 31, z1: 43, h: 12.6 }, by = groundH((BW.x0 + BW.x1) / 2, BW.z0), bcx = (BW.x0 + BW.x1) / 2, bcz = (BW.z0 + BW.z1) / 2;
     var tile = canvasTex(256, 256, function (g, w, h) { g.fillStyle = "#f2f3f4"; g.fillRect(0, 0, w, h); var r = mulberry32(21); for (var y = 0; y < 4; y++) for (var x = 0; x < 4; x++) { var l = 236 + (r() - 0.5) * 12 | 0; g.fillStyle = "rgb(" + l + "," + l + "," + (l + 2) + ")"; g.fillRect(x * 64 + 2, y * 64 + 2, 60, 60); } g.fillStyle = "#b9bdc2"; for (var i = 0; i <= 4; i++) { g.fillRect(i * 64 - 1, 0, 2, h); g.fillRect(0, i * 64 - 1, w, 2); } });
     var M_tileW = std(0xffffff, { map: tile, roughness: 0.4 }), M_blue = std(0x1f4fb0, { roughness: 0.45 }), M_red = std(0xb8202a, { roughness: 0.45 }), glass = M.darkGlass || M.glass;
     var body = box(bcx, by + BW.h / 2 - 3, bcz, BW.x1 - BW.x0, BW.h + 6, BW.z1 - BW.z0, M_tileW, { tile: 1.8, occ: true, col: true });
     box(bcx, by + BW.h + 0.15, bcz, BW.x1 - BW.x0 + 0.3, 0.3, BW.z1 - BW.z0 + 0.3, M_blue, { occ: true });
-    [by + 3.4, by + 7.2].forEach(function (y) { box(bcx, y, BW.z0 - 0.03, BW.x1 - BW.x0 + 0.1, 0.32, 0.08, M_blue, { cast: false }); box(BW.x1 + 0.03, y, bcz, 0.08, 0.32, BW.z1 - BW.z0 + 0.1, M_blue, { cast: false }); });
+    [by + 3.4, by + 7.4, by + 11.0].forEach(function (y) { box(bcx, y, BW.z0 - 0.03, BW.x1 - BW.x0 + 0.1, 0.32, 0.08, M_blue, { cast: false }); box(BW.x1 + 0.03, y, bcz, 0.08, 0.32, BW.z1 - BW.z0 + 0.1, M_blue, { cast: false }); });
     // red-framed curtain glass on the right half of the front
-    box(-60.2, by + 4.6, BW.z0 - 0.05, 8.8, 5.6, 0.06, M_red, { cast: false }); box(-60.2, by + 4.6, BW.z0 - 0.09, 8.2, 5.0, 0.04, glass, { cast: false });
-    for (var m = 0; m < 6; m++) box(-64.0 + m * 1.55, by + 4.6, BW.z0 - 0.12, 0.06, 5.0, 0.04, std(0x2a2c30), { cast: false });
+    box(-60.2, by + 5.6, BW.z0 - 0.05, 8.8, 7.6, 0.06, M_red, { cast: false }); box(-60.2, by + 5.6, BW.z0 - 0.09, 8.2, 7.0, 0.04, std(0x22344e, { roughness: 0.15, metalness: 0.5 }), { cast: false });
+    for (var m = 0; m < 6; m++) box(-64.0 + m * 1.55, by + 5.6, BW.z0 - 0.12, 0.06, 7.0, 0.04, std(0x2a2c30), { cast: false });
+    [by + 3.4, by + 7.4].forEach(function (y) { box(-60.2, y, BW.z0 - 0.12, 8.2, 0.08, 0.05, std(0x2a2c30), { cast: false }); });
     // portholes down the left edge
-    [by + 2.4, by + 5.4, by + 8.4].forEach(function (y) { var ph = new THREE.Mesh(new THREE.CircleGeometry(0.42, 20), std(0x1c2a3a, { roughness: 0.2, metalness: 0.4 })); ph.position.set(-69.6, y, BW.z0 - 0.05); ph.rotation.y = Math.PI; scene.add(ph); });
+    [by + 2.4, by + 5.4, by + 8.6, by + 11.6].forEach(function (y) { var ph = new THREE.Mesh(new THREE.CircleGeometry(0.42, 20), std(0x1c2a3a, { roughness: 0.2, metalness: 0.4 })); ph.position.set(-69.6, y, BW.z0 - 0.05); ph.rotation.y = Math.PI; scene.add(ph); });
     // sign box on the top-left corner
     var signT = canvasTex(512, 160, function (g, w, h) { g.fillStyle = "#14141c"; g.fillRect(0, 0, w, h); g.strokeStyle = "#e0303a"; g.lineWidth = 6; g.strokeRect(6, 6, w - 12, h - 12); g.fillStyle = "#ff3a4a"; g.textAlign = "center"; g.textBaseline = "middle"; g.font = '800 92px "IBM Plex Sans KR", sans-serif'; g.fillText("대화볼링", w / 2 - 20, h / 2 + 4); g.font = '700 26px "IBM Plex Sans KR", sans-serif'; g.fillText("센터", w - 46, h / 2); }); signTex.push(signT);
-    box(-67.2, by + 9.0, BW.z0 - 0.2, 6.2, 2.0, 0.3, std(0x14141c), { cast: false });
-    plane(6.0, 1.85, new THREE.MeshBasicMaterial({ map: signT, toneMapped: false }), -67.2, by + 9.0, BW.z0 - 0.36, { rx: 0, ry: Math.PI });
+    box(-67.2, by + 12.4, BW.z0 - 0.2, 6.2, 2.0, 0.3, std(0x14141c), { cast: false });
+    plane(6.0, 1.85, new THREE.MeshBasicMaterial({ map: signT, toneMapped: false }), -67.2, by + 12.4, BW.z0 - 0.36, { rx: 0, ry: Math.PI });
     // entrance: steps + glass double door + small canopy
     for (var s = 0; s < 4; s++) box(-66.4, by + 0.1 + s * 0.17, BW.z0 - 1.6 + s * 0.38, 3.2, 0.2, 0.42, std(0xa9a49a, { roughness: 0.9 }), { cast: false });
     box(-66.4, by + 1.75, BW.z0 - 0.06, 2.2, 2.4, 0.06, M.frame || std(0x2a2c30), { cast: false }); box(-66.4, by + 1.75, BW.z0 - 0.1, 2.0, 2.2, 0.03, glass, { cast: false });
@@ -4401,6 +4403,11 @@ window.addEventListener("error", function (e) {
     [3.85, 4.1].forEach(function (y) { var band = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.12, 20, 1, true), M_red); band.position.set(-58.5, by + BW.h + 1.0 + y, bcz + 1); scene.add(band); });
     [[-0.5, -0.5], [0.5, -0.5], [0, 0.6]].forEach(function (o) { cyl(-58.5 + o[0], by + BW.h + 0.6, bcz + 1 + o[1], 0.04, 0.04, 0.9, M.metal, 5, { cast: false }); });
     box(-69.6, by + BW.h + 0.8, BW.z1 - 2, 1.4, 1.2, 1.4, std(0x2f78c0, { roughness: 0.5 }));  // rooftop water tank
+    // street edge from the photo: low red-brick planter wall (gap at the entrance) + two street trees + lamp poles
+    var M_brk = std(0x7a3a34, { roughness: 0.9 });
+    [[-71, -68.3], [-64.5, -55]].forEach(function (r) { box((r[0] + r[1]) / 2, by + 0.3, 28.3, r[1] - r[0], 0.6, 0.4, M_brk, { col: true }); });
+    roundTree(-61.2, 29.4, 1.25); roundTree(-56.4, 29.4, 1.2);
+    [-58.8, -63.4].forEach(function (x) { cyl(x, by + 3.2, 28.0, 0.07, 0.09, 6.4, M.metal, 8, { cast: false }); });
     // forecourt pavement
     plane(BW.x1 - BW.x0 + 4, 4.4, std(0xffffff, { map: T.paver || T.stone, roughness: 0.85 }), bcx, by + 0.03, BW.z0 - 2.4, { tile: 1.5 });
 
@@ -4409,16 +4416,47 @@ window.addEventListener("error", function (e) {
     aptTex.wrapT = THREE.RepeatWrapping;
     var logo = canvasTex(256, 256, function (g, w, h) { g.fillStyle = "#f4f5f6"; g.fillRect(0, 0, w, h); g.fillStyle = "#1f3a6a"; g.beginPath(); g.moveTo(w / 2, 30); g.lineTo(w / 2 + 70, 140); g.lineTo(w / 2 - 70, 140); g.closePath(); g.fill(); g.fillStyle = "#f4f5f6"; g.beginPath(); g.moveTo(w / 2, 70); g.lineTo(w / 2 + 34, 128); g.lineTo(w / 2 - 34, 128); g.closePath(); g.fill(); g.fillStyle = "#1f3a6a"; g.textAlign = "center"; g.font = '800 34px "IBM Plex Sans KR", sans-serif'; g.fillText("신안 인스빌", w / 2, 190); g.font = '700 24px "IBM Plex Sans KR", sans-serif'; g.fillText("111", w / 2, 226); }); signTex.push(logo);
     var M_apt = std(0xffffff, { map: aptTex, roughness: 0.7 }), M_aptSide = std(0xeeeff0, { roughness: 0.8 });
-    [[-84, 36, 40], [-86, 52, 44], [-88, 68, 38]].forEach(function (a, i) {
-      var ax = a[0], az = a[1], H = a[2], ay = groundH(ax, az), w = 9, d = 13;
+    [[-84, 36, 64], [-86, 53, 68], [-88, 70, 60]].forEach(function (a, i) {
+      var ax = a[0], az = a[1], H = a[2], ay = groundH(ax, az), w = 11, d = 15;
       box(ax, ay + H / 2 - 4, az, w, H + 8, d, M_aptSide, { occ: true, col: true });
       plane(d, H, M_apt, ax + w / 2 + 0.02, ay + H / 2, az, { rx: 0, ry: Math.PI / 2 }); plane(w, H, M_apt, ax, ay + H / 2, az - d / 2 - 0.02, { rx: 0, ry: Math.PI });
       box(ax, ay + H + 0.4, az, w + 0.4, 0.8, d + 0.4, M_aptSide, { cast: false });
       box(ax, ay + H + 1.4, az - 2, 3, 1.6, 3, M_aptSide, { cast: false });
       var lg = plane(5.2, 5.2, std(0xffffff, { map: logo, roughness: 0.7 }), ax + w / 2 + 0.03, ay + H - 4, az, { rx: 0, ry: Math.PI / 2 });
+      plane(4.6, 2.0, std(0xffffff, { map: textTex(256, 112, "#f4f5f6", "#1f3a6a", ["신안", String(111 + i)], 44), roughness: 0.7 }), ax + w / 2 + 0.03, ay + H - 8.2, az, { rx: 0, ry: Math.PI / 2 });
       if (i === 0) { box(ax + w / 2 + 3, ay + 1.6, az - 3, 6, 3.2, 6, std(0xe8e2d4, { roughness: 0.9 }), { col: true }); }
     });
   })();
+  (function roadMedian() { // double yellow + diagonal hatch median, from the street-view photo
+    var hatch = canvasTex(256, 64, function (g, w, h) { g.clearRect(0, 0, w, h); g.fillStyle = "#f2c230"; g.fillRect(0, 0, w, 5); g.fillRect(0, h - 5, w, 5); g.lineWidth = 7; g.strokeStyle = "#f2c230"; for (var x = -64; x < w + 64; x += 40) { g.beginPath(); g.moveTo(x, h); g.lineTo(x + 40, 0); g.stroke(); } });
+    hatch.wrapS = THREE.RepeatWrapping;
+    var M_h = new THREE.MeshStandardMaterial({ map: hatch, transparent: true, depthWrite: false, roughness: 0.8 });
+    for (var x = -69; x < -37; x += 4) { if (Math.abs(x + 2 - (-56)) < 3.2) continue; var m = plane(4, 1.0, M_h, x + 2, groundH(x + 2, 24.3) + 0.035, 24.3, {}); m.material = M_h; }
+  })();
+  var VOICE = { on: true, ko: null, chars: {
+    npc: { who: "마을지기", pitch: 0.85, rate: 0.98 }, order: { who: "바리스타", pitch: 1.3, rate: 1.08 }, selfbar: { who: "바리스타", pitch: 1.3, rate: 1.08 },
+    floors: { who: "안내 집사님", pitch: 1.12, rate: 1.0 }, dept: { who: "안내 집사님", pitch: 1.12, rate: 1.0 }, sched: { who: "안내 집사님", pitch: 1.12, rate: 1.0 },
+    board: { who: "안내 집사님", pitch: 1.12, rate: 1.0 }, sign: { who: "마을지기", pitch: 0.85, rate: 0.98 }, verse: { who: "목사님", pitch: 0.75, rate: 0.92 },
+    teen: { who: "중고등부 선생님", pitch: 1.05, rate: 1.04 }, hiel: { who: "HIEL 리더", pitch: 1.0, rate: 1.06 }, foru: { who: "For U 리더", pitch: 1.15, rate: 1.04 }, olsc: { who: "OLSC 주장", pitch: 0.95, rate: 1.1 },
+    goods: { who: "OLSC 매니저", pitch: 1.2, rate: 1.06 }, records: { who: "OLSC 매니저", pitch: 1.2, rate: 1.06 }, bbq: { who: "청년부 형", pitch: 0.9, rate: 1.05 }, guide: { who: "마을지기", pitch: 0.85, rate: 0.98 } } };
+  try { VOICE.on = localStorage.getItem("hsv_voice") !== "0"; } catch (e) { /* ignore */ }
+  function pickKo() { if (!window.speechSynthesis) return null; var vs = speechSynthesis.getVoices() || []; for (var i = 0; i < vs.length; i++) if (/^ko/i.test(vs[i].lang)) return vs[i]; return null; }
+  if (window.speechSynthesis) { VOICE.ko = pickKo(); try { speechSynthesis.onvoiceschanged = function () { VOICE.ko = pickKo(); }; } catch (e) { /* ignore */ } }
+  function npcSpeak(text, ch) {
+    if (!VOICE.on || !window.speechSynthesis || !text) return;
+    try { speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(text.slice(0, 260)); u.lang = "ko-KR"; if (VOICE.ko) u.voice = VOICE.ko; u.pitch = ch.pitch; u.rate = ch.rate; u.volume = 0.95; speechSynthesis.speak(u); } catch (e) { /* ignore */ }
+  }
+  var openPanelBase = openPanel;
+  openPanel = function (kind) {
+    openPanelBase.apply(this, arguments);
+    var ch = VOICE.chars[kind]; if (!ch) return;
+    var pick = function (sel) { var n = panelBody.querySelector(sel); return n ? n.textContent.trim() : ""; };
+    var line = [pick("h2"), pick(".p-sum"), pick(".p-body")].filter(Boolean).join(". ").replace(/[↑↗·]/g, " ");
+    npcSpeak(line, ch);
+  };
+  var closeBase = closePanel; closePanel = function () { try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) { /* ignore */ } return closeBase.apply(this, arguments); };
+  var greetBase = EXTRA_ACTIONS.greeter; EXTRA_ACTIONS.greeter = function () { greetBase(); npcSpeak("어서 오세요. 오늘 주보 받아 가세요. 본당은 로비 왼쪽 계단으로 2층에 있어요.", VOICE.chars.floors); };
+  var bowlBase; setTimeout(function () { bowlBase = EXTRA_ACTIONS.bowling; if (bowlBase) EXTRA_ACTIONS.bowling = function () { bowlBase(); npcSpeak("대화볼링장에 오신 걸 환영해요. 내부와 볼링 게임은 곧 열려요.", { pitch: 1.15, rate: 1.05 }); }; }, 0);
   // ---- bowling alley door: visit reward now, interior + game come next
   EXTRA_ACTIONS.bowling = function () {
     var d = new Date(), day = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
