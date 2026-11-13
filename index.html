@@ -836,7 +836,7 @@ window.addEventListener("error", function (e) {
   function groundH(x, z) {
     if (SANCT_UP) {
       if (x > SANCT.x0 && x < SANCT.x1 && z > SANCT.z0 && z < SANCT.z1) return Y2;
-      if (z > -9.85 && z < -7.75 && x >= 3.6 && x <= 9.6) return Y2 * clamp((9.6 - x) / 5.4, 0, 1);
+      if (z > -9.85 && z < -7.75 && x >= 3.6 && x <= 9.6) return Y2 * clamp((9.6 - x) / 5.6 + 0.5 / 18, 0, 1); // follows the 18 drawn steps
     }
     if (inSite(x, z)) return siteHeight(x, z);
     var best = 1e9, bx = 0, bz = 0;
@@ -1246,6 +1246,15 @@ window.addEventListener("error", function (e) {
     [-9.82, -7.78].forEach(function (z) { box(6.8, Y2 / 2 + 0.9, z, 5.6, 0.05, 0.05, M.metal, { cast: false }); addRect(4.3, 9.4, z - 0.05, z + 0.05); });
     box(6.8, Y2 / 2, -10.0, 5.6, Y2, 0.3, M.stoneIn, { cast: false }); box(6.8, Y2 / 2, -7.6, 5.6, Y2, 0.3, M.stoneIn, { cast: false });
     plane(1.8, 0.32, std(0xffffff, { map: textTex(576, 96, "#14203d", "#ffffff", ["2층 본당 ↑"], 54) }), 9.3, 3.0, -9.84, { rx: 0 });
+    // stair finish: carpet runner, wall handrails, step lights, top landing + sanctuary door frame, lobby portal
+    var M_run = std(0x7a2f3e, { roughness: 0.95 }), M_wood = std(0x8a5a36, { roughness: 0.5 }), M_led = new THREE.MeshBasicMaterial({ color: 0xfff1c8 });
+    for (var j = 0; j < n; j++) { var xs = 9.6 - (j + 0.5) * run, hs = Y2 * (j + 1) / n; box(xs, hs + 0.006, -8.8, run + 0.01, 0.012, 1.2, M_run, { cast: false }); if (j % 3 === 1) { box(xs, hs - Y2 / n * 0.5, -9.83, 0.12, 0.04, 0.02, M_led, { cast: false }); box(xs, hs - Y2 / n * 0.5, -7.77, 0.12, 0.04, 0.02, M_led, { cast: false }); } }
+    [-9.8, -7.8].forEach(function (z) { var len = Math.hypot(5.6, Y2), rail = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, len, 8), M_wood); rail.position.set(6.8, Y2 / 2 + 0.95, z); rail.rotation.z = Math.atan2(5.6, Y2); scene.add(rail); });
+    box(3.95, Y2 - 0.02, -8.8, 0.7, 0.04, 2.0, M.stoneFloor || M_st, { cast: false });
+    box(3.82, Y2 + 2.75, -8.8, 0.2, 0.18, 2.3, M_wood, { cast: false }); [-9.92, -7.68].forEach(function (z) { box(3.82, Y2 + 1.35, z, 0.2, 2.7, 0.14, M_wood, { cast: false }); });
+    plane(1.4, 0.3, std(0xffffff, { map: textTex(480, 96, "#5a3a22", "#fff6e6", ["본당 · SANCTUARY"], 46) }), 4.05, Y2 + 3.05, -8.8, { rx: 0, ry: Math.PI / 2 });
+    box(9.62, 2.78, -8.8, 0.24, 0.16, 2.2, M_wood, { cast: false }); [-9.86, -7.74].forEach(function (z) { box(9.62, 1.35, z, 0.24, 2.7, 0.12, M_wood, { cast: false }); });
+    var stl = new THREE.PointLight(0xffe6c0, 0.7, 7, 1.6); stl.position.set(6.8, Y2 + 1.2, -8.8); scene.add(stl);
   })();
   // tower base + lobby
   var M_lobbyWall = std(0xf2efe9, { roughness: 0.9 });
@@ -1603,7 +1612,7 @@ window.addEventListener("error", function (e) {
     branch(x, y, z, 2.4 * s, 0.16 * s, 0, 0.05, 3);
     addCircle(x, z, 0.25);
   }
-  bareTree(-21.6, 2.4, 1.0); bareTree(-8.6, -4.6, 0.9); bareTree(22.6, -3.2, 0.9);
+  bareTree(-19.3, 2.9, 1.0); /* moved off the cafe porch, to the right of the building like the photo */ bareTree(-8.6, -4.6, 0.9); bareTree(22.6, -3.2, 0.9);
   function cypress(x, z, s) { var y = groundH(x, z); var m = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 10), std(0x2b4a2c, { roughness: 1 })); m.position.set(x, y + 2.6 * s, z); m.scale.set(1.3 * s, 2.8 * s, 1.3 * s); m.castShadow = true; scene.add(m); addCircle(x, z, 1.1 * s); }
   cypress(-35, -2, 1.0); cypress(-34.2, -6.5, 1.15); cypress(-36.5, 2.5, 0.9); cypress(-37.5, -10, 1.1); cypress(24.5, -10, 0.9);
   // pine forest (instanced)
