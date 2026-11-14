@@ -2066,7 +2066,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1114-1948", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1114-1950", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -5962,7 +5962,7 @@ window.addEventListener("error", function (e) {
       [[-58, 22, 70], [-30, 4, 26], 5.0, "대화볼링장 · 신안 아파트"],
       [[-40, 15, 22], [-30, 3, -3], 4.5, "아셀카페"],
       [[14, 13, 30], [-4, 6, -10], 4.5, "목포한사랑교회"],
-      [[9, 6.5, 17], [-4, 8.5, -12], 4.0, ""]];
+      [[3, 7.5, 21], [-4, 8.5, -12], 4.0, ""]];
     if (seen) SHOTS = SHOTS.slice(2);
     intro.style.display = "none"; document.body.classList.add("pro-on");
     if (curTod === "day") setTod("dusk");
@@ -5980,7 +5980,7 @@ window.addEventListener("error", function (e) {
       var nxt = SHOTS[Math.min(PRO.shot + 1, SHOTS.length - 1)], k = last ? 0 : ease(Math.min(1, PRO.t / sh[2]));
       A.fromArray(sh[0]); B.fromArray(nxt[0]); C.fromArray(sh[1]); Dv.fromArray(nxt[1]);
       PRO.eye.lerpVectors(A, B, k); PRO.tgt.lerpVectors(C, Dv, k);
-      if (last) { var a = PRO.t * 0.05; PRO.eye.set(-4 + Math.sin(a) * 13.5, 6.5 + Math.sin(PRO.t * 0.3) * 0.3, -12 + Math.cos(a) * 29); showTitle(); }
+      if (last) { var a = Math.sin(PRO.t * 0.06); PRO.eye.set(3 + a * 9, 7.5 + Math.sin(PRO.t * 0.25) * 0.4, 21 - Math.abs(a) * 2); PRO.tgt.set(-4 + a * 2, 8.5, -12); showTitle(); } // slow sway in front of the church
       camera.position.copy(PRO.eye); camera.lookAt(PRO.tgt);
       var cap = last ? "" : sh[3]; if (cap !== PRO.cap) { PRO.cap = cap; capEl.style.opacity = "0"; setTimeout(function () { capEl.textContent = PRO.cap; capEl.style.opacity = PRO.cap ? "1" : "0"; }, 350); }
     });
