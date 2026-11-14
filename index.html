@@ -2066,7 +2066,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1114-1951", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1114-1956", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -5854,15 +5854,20 @@ window.addEventListener("error", function (e) {
     } else {
       var cdist = CAMS.init ? CAMS.dist : cam.dist, cyaw = CAMS.init ? CAMS.yaw : cam.yaw, cpit = CAMS.init ? CAMS.pitch : cam.pitch;
       var maxD = indoor ? Math.min(cdist, 4.2) : cdist;
-      var cp = Math.cos(cpit), spn = Math.sin(cpit);
       vHead.set(player.x, player.y + 1.65, player.z);
-      vGoal.set(player.x + Math.sin(cyaw) * maxD * cp, player.y + 1.65 + spn * maxD, player.z + Math.cos(cyaw) * maxD * cp);
-      vDir.subVectors(vGoal, vHead); var dist = vDir.length(); vDir.normalize();
-      ray.set(vHead, vDir); ray.far = dist;
-      var hits = ray.intersectObjects(occluders, false);
-      var hitD = hits.length ? hits[0].distance : dist;
+      // camera stays at a comfortable distance: if a wall blocks the view, rise over it (up to ~60°) before pulling in
+      var hits, hitD, dist, tryP = indoor ? [0] : [0, 0.22, 0.45, 0.75], best = null;
+      for (var tp = 0; tp < tryP.length; tp++) {
+        var pit = Math.min(1.15, cpit + tryP[tp]), cp = Math.cos(pit), spn = Math.sin(pit);
+        vGoal.set(player.x + Math.sin(cyaw) * maxD * cp, player.y + 1.65 + spn * maxD, player.z + Math.cos(cyaw) * maxD * cp);
+        vDir.subVectors(vGoal, vHead); dist = vDir.length(); vDir.normalize();
+        ray.set(vHead, vDir); ray.far = dist; hits = ray.intersectObjects(occluders, false); hitD = hits.length ? hits[0].distance : dist;
+        if (!best || hitD > best.d + 0.3) best = { d: hitD, p: pit };
+        if (hitD >= dist * 0.85) break;
+      }
+      if (hitD < dist * 0.85 && best) { var bp = best.p; vGoal.set(player.x + Math.sin(cyaw) * maxD * Math.cos(bp), player.y + 1.65 + Math.sin(bp) * maxD, player.z + Math.cos(cyaw) * maxD * Math.cos(bp)); vDir.subVectors(vGoal, vHead); dist = vDir.length(); vDir.normalize(); ray.set(vHead, vDir); ray.far = dist; hits = ray.intersectObjects(occluders, false); hitD = hits.length ? hits[0].distance : dist; }
       if (dist > 1) { for (var cr = 0; cr < 4; cr++) { var ox = (cr % 2 ? 1 : -1) * 0.28, oy = (cr < 2 ? 1 : -1) * 0.2; vTmpC.set(vHead.x + Math.cos(cyaw) * ox, vHead.y + oy, vHead.z - Math.sin(cyaw) * ox); ray.set(vTmpC, vDir); ray.far = dist; var h2 = ray.intersectObjects(occluders, false); if (h2.length && h2[0].distance < hitD) hitD = h2[0].distance; } }
-      if (hitD < dist) { hits = hits.length ? hits : [1]; var hd = Math.max(0.4, hitD - 0.35); vGoal.copy(vHead).addScaledVector(vDir, hd); }
+      if (hitD < dist) { hits = hits.length ? hits : [1]; var hd = Math.max(1.2, hitD - 0.35); vGoal.copy(vHead).addScaledVector(vDir, hd); }
       var gmin = groundH(vGoal.x, vGoal.z) + 0.4; if (vGoal.y < gmin) vGoal.y = gmin;
       if (snapCam) { camera.position.copy(vGoal); snapCam = false; } else camera.position.lerp(vGoal, 1 - Math.exp(-dt * (hits.length ? 20 : 10)));
       camera.lookAt(player.x, player.y + 1.45, player.z);
