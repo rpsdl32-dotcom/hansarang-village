@@ -475,8 +475,25 @@ body.touch .kbd-only { display: none; }
 </div>
 <div id="nogl"><div>이 기기에서는 3D 화면을 열 수 없습니다.<br>다른 브라우저나 기기로 다시 열어 주세요.</div></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script>
+<script type="module">
+/* Three.js r170 loader + r128 compatibility layer.
+   The game code was written for r128 (global THREE, sRGBEncoding, legacy light units, raw hex colours).
+   This keeps its look identical while running on the modern renderer, then starts the game script below. */
+import * as NS from "https://cdn.jsdelivr.net/npm/three@0.170.0/+esm";
+import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/loaders/GLTFLoader.js/+esm";
+import { DRACOLoader } from "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/loaders/DRACOLoader.js/+esm";
+const T = Object.assign({}, NS, { GLTFLoader, DRACOLoader, REVISION_HSV: "170" });
+T.ColorManagement.enabled = false;               // hex colours behave like r128 (the palette was tuned that way)
+T.sRGBEncoding = 3001; T.LinearEncoding = 3000;
+Object.defineProperty(T.Texture.prototype, "encoding", { configurable: true, get() { return this.colorSpace === T.SRGBColorSpace ? 3001 : 3000; }, set(v) { this.colorSpace = v === 3001 ? T.SRGBColorSpace : T.NoColorSpace; } });
+Object.defineProperty(T.WebGLRenderer.prototype, "outputEncoding", { configurable: true, get() { return this.outputColorSpace === T.SRGBColorSpace ? 3001 : 3000; }, set(v) { this.outputColorSpace = v === 3001 ? T.SRGBColorSpace : T.LinearSRGBColorSpace; } });
+// r155+ uses physical light units; r128 "legacy" lights were ×π brighter. Scale every light so scenes keep their brightness.
+Object.defineProperty(T.Light.prototype, "intensity", { configurable: true, get() { return this._hsvI; }, set(v) { this._hsvI = v * Math.PI; } });
+window.THREE = T;
+const src = document.getElementById("hsv-game").textContent, sc = document.createElement("script");
+sc.textContent = src; document.body.appendChild(sc);
+</script>
+<script type="text/hsv-game" id="hsv-game">
 window.addEventListener("error", function (e) {
   var n = document.getElementById("nogl");
   if (!n || n.dataset.shown) return;
@@ -2066,7 +2083,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1114-2007", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1114-2056", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -4014,7 +4031,7 @@ window.addEventListener("error", function (e) {
   var GLBT = { active: false, root: null, mixer: null, acts: {}, cur: null, stats: null, flip: false, fps: 0, fpsAcc: 0, fpsN: 0, loading: false, name: "" };
   var GLB_LIBS = ["https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js", "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"];
   function glbLoadLibs(cb) {
-    if (THREE.GLTFLoader) { cb(true); return; }
+    if (THREE.GLTFLoader) { cb(true); return; } // r170 build ships GLTFLoader/DRACOLoader
     var left = GLB_LIBS.length, ok = true, done = false, fin = function (v) { if (done) return; done = true; cb(v); };
     setTimeout(function () { fin(!!THREE.GLTFLoader); }, 15000);
     GLB_LIBS.forEach(function (u) { var sc = document.createElement("script"); sc.src = u; sc.async = false; sc.onload = function () { if (--left === 0) fin(ok && !!THREE.GLTFLoader); }; sc.onerror = function () { ok = false; if (--left === 0) fin(false); }; document.head.appendChild(sc); });
@@ -4040,7 +4057,7 @@ window.addEventListener("error", function (e) {
     glbLoadLibs(function (ok) {
       if (!ok) { GLBT.loading = false; toast("GLB 시험", "모델 불러오기 도구를 받지 못했어요. 인터넷 연결을 확인해 주세요. 기존 캐릭터는 그대로예요."); return; }
       var url = URL.createObjectURL(file), loader = new THREE.GLTFLoader();
-      if (THREE.DRACOLoader) { var dr = new THREE.DRACOLoader(); dr.setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/draco/"); loader.setDRACOLoader(dr); }
+      if (THREE.DRACOLoader) { var dr = new THREE.DRACOLoader(); dr.setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/"); loader.setDRACOLoader(dr); }
       loader.load(url, function (gltf) {
         URL.revokeObjectURL(url); GLBT.loading = false;
         try {
