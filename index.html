@@ -1756,16 +1756,37 @@ window.addEventListener("error", function (e) {
 
   // cars
   var carColors = [0xf2f2f2, 0xbfc3c7, 0x1d1f22, 0xd8b6bd, 0x9aa2a8, 0xf4f4f4, 0x2a2e33, 0x7f8790];
+  // Renewal: rounded sedan built from a side-profile extrusion (shared geometry for every parked car)
+  var CARGEO = null;
+  function carGeo() {
+    if (CARGEO) return CARGEO;
+    function prof(pts) { var sh = new THREE.Shape(); sh.moveTo(pts[0][0], pts[0][1]); for (var i = 1; i < pts.length; i++) sh.lineTo(pts[i][0], pts[i][1]); sh.closePath(); return sh; }
+    function ext(sh, w, bev) { var g = new THREE.ExtrudeGeometry(sh, { depth: w, bevelEnabled: true, bevelThickness: bev, bevelSize: bev, bevelSegments: 3, curveSegments: 6 }); g.translate(0, 0, -w / 2); g.rotateY(-Math.PI / 2); g.computeVertexNormals(); return g; }
+    // profile in (length z, height y); front of the car is +z
+    var bodyS = new THREE.Shape(); bodyS.moveTo(-2.18, 0.34); bodyS.lineTo(-2.2, 0.72); bodyS.quadraticCurveTo(-2.18, 0.92, -1.95, 0.95); bodyS.lineTo(1.55, 0.92); bodyS.quadraticCurveTo(2.15, 0.86, 2.2, 0.62); bodyS.lineTo(2.18, 0.34);
+    bodyS.lineTo(1.72, 0.34); bodyS.absarc(1.38, 0.34, 0.4, 0, Math.PI, false); bodyS.lineTo(-1.04, 0.34); bodyS.absarc(-1.38, 0.34, 0.4, 0, Math.PI, false); bodyS.closePath();
+    var cabS = new THREE.Shape(); cabS.moveTo(-1.62, 0.9); cabS.quadraticCurveTo(-1.45, 1.42, -0.95, 1.46); cabS.lineTo(0.35, 1.46); cabS.quadraticCurveTo(0.75, 1.42, 1.2, 0.9); cabS.closePath();
+    var glassS = new THREE.Shape(); glassS.moveTo(-1.5, 0.96); glassS.quadraticCurveTo(-1.36, 1.36, -0.93, 1.39); glassS.lineTo(0.33, 1.39); glassS.quadraticCurveTo(0.68, 1.36, 1.06, 0.96); glassS.closePath();
+    var tire = new THREE.CylinderGeometry(0.34, 0.34, 0.24, 20); tire.rotateZ(Math.PI / 2);
+    var rim = new THREE.CylinderGeometry(0.21, 0.21, 0.26, 10); rim.rotateZ(Math.PI / 2);
+    CARGEO = { body: ext(bodyS, 1.62, 0.08), cab: ext(cabS, 1.38, 0.07), glass: ext(glassS, 1.46, 0.02), tire: tire, rim: rim,
+      lamp: new THREE.BoxGeometry(0.42, 0.12, 0.06), bump: new THREE.BoxGeometry(1.7, 0.16, 0.12), mirror: new THREE.BoxGeometry(0.14, 0.1, 0.18), plate: new THREE.BoxGeometry(0.42, 0.12, 0.02),
+      glassM: std(0x1a2430, { roughness: 0.05, metalness: 0.3 }), tireM: std(0x141414, { roughness: 0.9 }), rimM: std(0xc9ced4, { roughness: 0.25, metalness: 0.9 }), trimM: std(0x202326, { roughness: 0.5 }),
+      hlM: std(0xffffff, { emissive: 0xfff2d0, emissiveIntensity: 0.4, roughness: 0.1 }), tlM: std(0xb3262c, { emissive: 0x5a0a0a, emissiveIntensity: 0.4, roughness: 0.2 }), plateM: std(0xf4f4f0, { roughness: 0.5 }), bodyM: {} };
+    return CARGEO;
+  }
+  function sedan(col, hlM, tlM) {
+    var g = new THREE.Group(), C = carGeo(); hlM = hlM || C.hlM; tlM = tlM || C.tlM;
+    var body = C.bodyM[col] || (C.bodyM[col] = std(col, { roughness: 0.28, metalness: 0.6 }));
+    function m(geo, mat, px, py, pz, cast) { var o = new THREE.Mesh(geo, mat); o.position.set(px || 0, py || 0, pz || 0); if (cast) o.castShadow = true; g.add(o); return o; }
+    m(C.body, body, 0, 0, 0, true); m(C.cab, body, 0, 0, 0, true); m(C.glass, C.glassM);
+    [[-0.84, 1.38], [0.84, 1.38], [-0.84, -1.38], [0.84, -1.38]].forEach(function (p) { m(C.tire, C.tireM, p[0], 0.34, p[1]); m(C.rim, C.rimM, p[0], 0.34, p[1]); });
+    [-0.56, 0.56].forEach(function (sx) { m(C.lamp, hlM, sx, 0.74, 2.24); m(C.lamp, tlM, sx, 0.78, -2.24); m(C.mirror, body, sx * 1.62, 1.0, 0.95); });
+    m(C.bump, C.trimM, 0, 0.42, 2.25); m(C.bump, C.trimM, 0, 0.42, -2.25); m(C.plate, C.plateM, 0, 0.55, -2.3); m(C.plate, C.plateM, 0, 0.55, 2.31);
+    return g;
+  }
   function car(x, z, ry, col) {
-    var y = groundH(x, z), g = new THREE.Group();
-    var body = std(col, { roughness: 0.32, metalness: 0.55 }), dark = std(0x16191d, { roughness: 0.2, metalness: 0.4 });
-    var b1 = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.7, 4.4), body); b1.position.y = 0.62; b1.castShadow = true; g.add(b1);
-    var b2 = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.6, 2.4), body); b2.position.set(0, 1.25, -0.2); b2.castShadow = true; g.add(b2);
-    var w1 = new THREE.Mesh(new THREE.BoxGeometry(1.62, 0.48, 2.2), dark); w1.position.set(0, 1.26, -0.2); g.add(w1);
-    var hl = std(0xffffff, { emissive: 0xfff2d0, emissiveIntensity: 0.3 });
-    [-0.62, 0.62].forEach(function (sx) { var l = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.14, 0.05), hl); l.position.set(sx, 0.75, 2.2); g.add(l); var t = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.14, 0.05), std(0xb3262c)); t.position.set(sx, 0.78, -2.2); g.add(t); });
-    var wg = new THREE.CylinderGeometry(0.34, 0.34, 0.24, 14); wg.rotateZ(Math.PI / 2);
-    [[-0.86, 1.4], [0.86, 1.4], [-0.86, -1.4], [0.86, -1.4]].forEach(function (p) { var w = new THREE.Mesh(wg, dark); w.position.set(p[0], 0.34, p[1]); g.add(w); });
+    var y = groundH(x, z), g = sedan(col);
     g.position.set(x, y, z); g.rotation.y = ry; scene.add(g);
     var hx = Math.abs(Math.sin(ry)) > 0.5 ? 2.3 : 1.0, hz = Math.abs(Math.sin(ry)) > 0.5 ? 1.0 : 2.3;
     addRect(x - hx, x + hx, z - hz, z + hz);
@@ -2090,7 +2111,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1114-2120", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1114-2149", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -4685,14 +4706,8 @@ window.addEventListener("error", function (e) {
     if (east.r && east.y && east.g) TRF.lights.push({ kind: "car", ms: east });
     // moving cars (no colliders: they stop for red lights, the car ahead and people)
     function mkCar(col) {
-      var g = new THREE.Group(), body = std(col, { roughness: 0.32, metalness: 0.55 }), dark = std(0x16191d, { roughness: 0.2, metalness: 0.4 });
-      var b1 = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.7, 4.3), body); b1.position.y = 0.62; b1.castShadow = true; g.add(b1);
-      var b2 = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.58, 2.3), body); b2.position.set(0, 1.22, -0.2); g.add(b2);
-      var w1 = new THREE.Mesh(new THREE.BoxGeometry(1.62, 0.46, 2.1), dark); w1.position.set(0, 1.23, -0.2); g.add(w1);
       var hl = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff2d0, emissiveIntensity: 0.3 }), tl = new THREE.MeshStandardMaterial({ color: 0x9a1a1a, emissive: 0xff2a2a, emissiveIntensity: 0.2 });
-      [-0.6, 0.6].forEach(function (sx) { var a = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.14, 0.05), hl); a.position.set(sx, 0.75, 2.16); g.add(a); var b = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.14, 0.05), tl); b.position.set(sx, 0.75, -2.16); g.add(b); });
-      var wg = new THREE.CylinderGeometry(0.33, 0.33, 0.24, 12); wg.rotateZ(Math.PI / 2); [[-0.86, 1.35], [0.86, 1.35], [-0.86, -1.35], [0.86, -1.35]].forEach(function (p) { var w = new THREE.Mesh(wg, dark); w.position.set(p[0], 0.33, p[1]); g.add(w); });
-      g.userData.hl = hl; g.userData.tl = tl; scene.add(g); return g;
+      var g = sedan(col, hl, tl); g.userData.hl = hl; g.userData.tl = tl; scene.add(g); return g;
     }
     var cols = [0xf2f2f2, 0x2a2e33, 0xbfc3c7, 0x3a5a8a, 0xd8d8d0, 0x8a2a2a];
     [[-70, 1], [-40, 1], [10, 1], [-55, -1], [-15, -1], [40, -1]].forEach(function (c, i) { var m = mkCar(cols[i]); TRF.cars.push({ m: m, x: c[0], dir: c[1], v: 0, vmax: 7 + (i % 3) }); });
