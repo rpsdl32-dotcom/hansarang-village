@@ -1505,13 +1505,43 @@ window.addEventListener("error", function (e) {
     COL_LV = 1;
     box(ix1 - 0.25, Y + 1.0, -4.6, 0.45, 0.05, 3.4, std(0x9a6a3a, { roughness: 0.45 }), { col: true });
     [-5.8, -4.6, -3.4].forEach(function (z) { cyl(ix1 - 0.75, Y + 0.38, z, 0.025, 0.025, 0.76, blackM, 6, { cast: false }); var st = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.07, 14), std(0xb08a62, { roughness: 0.7 })); st.position.set(ix1 - 0.75, Y + 0.78, z); scene.add(st); box(ix1 - 0.93, Y + 1.0, z, 0.04, 0.35, 0.36, std(0xb08a62, { roughness: 0.7 }), { cast: false }); addCircle(ix1 - 0.75, z, 0.22); });
-    (function cafe2Seats() { // 2F seating: wood tables + cushioned chairs (layout estimated)
-      var wood = std(0xc9a06a, { roughness: 0.45 }), seatM = std(0x6b4a33, { roughness: 0.6 }), cush = std(0xe8d8bf, { roughness: 0.95 });
-      function chair(x, z, face) { box(x, Y + 0.45, z, 0.42, 0.05, 0.42, seatM, { cast: false }); box(x, Y + 0.49, z, 0.36, 0.04, 0.36, cush, { cast: false }); box(x - Math.sin(face) * 0.2, Y + 0.74, z - Math.cos(face) * 0.2, Math.abs(Math.cos(face)) * 0.38 + 0.04, 0.5, Math.abs(Math.sin(face)) * 0.38 + 0.04, seatM, { cast: false }); [[-0.17, -0.17], [0.17, -0.17], [-0.17, 0.17], [0.17, 0.17]].forEach(function (o) { box(x + o[0], Y + 0.22, z + o[1], 0.04, 0.44, 0.04, blackM, { cast: false }); }); }
-      function round(x, z) { cyl(x, Y + 0.37, z, 0.05, 0.05, 0.74, blackM, 8, { cast: false }); cyl(x, Y + 0.75, z, 0.42, 0.42, 0.05, wood, 20); cyl(x, Y + 0.02, z, 0.24, 0.24, 0.04, blackM, 12, { cast: false }); chair(x - 0.62, z, Math.PI / 2); chair(x + 0.62, z, -Math.PI / 2); addCircle(x, z, 0.75); }
-      round(-26.4, -3.6); round(-25.8, -5.6); // stair landing (x<-27, z<-6.2) kept clear
-      // warm pendant over each table
-      [[-26.4, -3.6], [-25.8, -5.6]].forEach(function (p) { cyl(p[0], Y + 2.1, p[1], 0.18, 0.08, 0.18, std(0x2a2a2a, { roughness: 0.4 }), 14, { cast: false }); var b = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), M_b2); b.position.set(p[0], Y + 1.98, p[1]); scene.add(b); box(p[0], Y + 2.5, p[1], 0.01, 0.8, 0.01, blackM, { cast: false }); });
+    (function cafe2Room() { // 2F from the user's photos: long walnut table + spindle chairs, track light, Edison bulbs, TV + banner, clock, cream armchairs, roller blinds
+      var walnut = std(0x7a4a2a, { roughness: 0.5 }), oak = std(0xd9b27a, { roughness: 0.55 }), cream = std(0xefe4d2, { roughness: 0.95 }), ink = std(0x1c1c1e, { roughness: 0.5 });
+      function spindle(x, z, face) { // Windsor spindle chair, back away from 'face' direction
+        var sx = Math.sin(face), sz = Math.cos(face);
+        box(x, Y + 0.45, z, 0.42, 0.04, 0.4, oak, { cast: false });
+        [[-0.17, -0.16], [0.17, -0.16], [-0.17, 0.16], [0.17, 0.16]].forEach(function (o) { var ox = o[0] * Math.abs(sz) + o[1] * Math.abs(sx), oz = o[1] * Math.abs(sz) + o[0] * Math.abs(sx); cyl(x + ox, Y + 0.22, z + oz, 0.018, 0.022, 0.45, oak, 6, { cast: false }); });
+        var bx = x - sx * 0.19, bz = z - sz * 0.19;
+        for (var k = -2; k <= 2; k++) cyl(bx + k * 0.075 * Math.abs(sz), Y + 0.72, bz + k * 0.075 * Math.abs(sx), 0.012, 0.012, 0.52, oak, 5, { cast: false });
+        box(bx, Y + 0.99, bz, 0.42 * Math.abs(sz) + 0.05, 0.05, 0.42 * Math.abs(sx) + 0.05, oak, { cast: false });
+      }
+      // long table (two walnut slabs, black base) + 10 chairs
+      var TX = -26.6, TZ = -5.3;
+      box(TX, Y + 0.75, TZ - 0.62, 1.05, 0.05, 1.22, walnut); box(TX, Y + 0.75, TZ + 0.62, 1.05, 0.05, 1.22, std(0x5e3a22, { roughness: 0.5 }));
+      [TZ - 0.9, TZ + 0.9].forEach(function (z) { cyl(TX, Y + 0.37, z, 0.06, 0.06, 0.72, ink, 8, { cast: false }); box(TX, Y + 0.02, z, 0.7, 0.04, 0.5, ink, { cast: false }); });
+      addRect(TX - 0.55, TX + 0.55, TZ - 1.25, TZ + 1.25);
+      [-0.95, -0.32, 0.32, 0.95].forEach(function (dz) { spindle(TX - 0.72, TZ + dz, Math.PI / 2); spindle(TX + 0.72, TZ + dz, -Math.PI / 2); });
+      spindle(TX, TZ - 1.5, 0); spindle(TX, TZ + 1.5, Math.PI);
+      // rectangular black track light with LED bars + Edison bulb cluster
+      var Ltop = Y + 2.5, led = new THREE.MeshBasicMaterial({ color: 0xfffbf0 });
+      [[TX, TZ - 1.3, 1.6, 0.05], [TX, TZ + 1.3, 1.6, 0.05], [TX - 0.8, TZ, 0.05, 2.6], [TX + 0.8, TZ, 0.05, 2.6]].forEach(function (r) { box(r[0], Ltop, r[1], r[2], 0.05, r[3], ink, { cast: false }); });
+      box(TX, Ltop - 0.04, TZ - 1.3, 1.2, 0.03, 0.04, led, { cast: false }); box(TX - 0.8, Ltop - 0.04, TZ, 0.04, 0.03, 1.9, led, { cast: false }); box(TX + 0.8, Ltop - 0.04, TZ + 0.3, 0.04, 0.03, 1.4, led, { cast: false });
+      [[TX - 0.8, TZ - 1.3], [TX + 0.8, TZ + 1.3]].forEach(function (p) { box(p[0], Ltop + 0.4, p[1], 0.01, 0.8, 0.01, ink, { cast: false }); });
+      var tl = new THREE.PointLight(0xfff2dc, 0.9, 7, 1.8); tl.position.set(TX, Ltop - 0.3, TZ); scene.add(tl);
+      var bulbM = std(0xffe2a0, { emissive: 0xffb44a, emissiveIntensity: 1.2, roughness: 0.2 });
+      [[0, 0], [0.18, 0.1], [-0.15, 0.14], [0.05, -0.18]].forEach(function (o, i) { var b = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), bulbM); b.position.set(-24.6 + o[0], Y + 2.25 - i * 0.12, -3.2 + o[1]); scene.add(b); box(-24.6 + o[0], Y + 2.5 - i * 0.06, -3.2 + o[1], 0.008, 0.4 + i * 0.12, 0.008, ink, { cast: false }); });
+      // TV on a white stand + banner on the north wall, wall clock
+      box(TX, Y + 0.45, iz0 + 0.3, 1.1, 0.9, 0.35, std(0xf2f2f2, { roughness: 0.6 }), { cast: false });
+      box(TX, Y + 1.35, iz0 + 0.1, 1.6, 0.92, 0.05, std(0x111114, { roughness: 0.25 }), { cast: false });
+      plane(2.6, 0.45, std(0xffffff, { map: textTex(1040, 180, "#dfeefb", "#1f3e86", ["Why not change the world?"], 78) }), TX, Y + 2.15, iz0 + 0.06, { rx: 0 });
+      plane(0.5, 0.5, std(0xffffff, { map: canvasTex(128, 128, function (g) { g.fillStyle = "#e9e5de"; g.beginPath(); g.arc(64, 64, 60, 0, 6.3); g.fill(); g.strokeStyle = "#2a2a2a"; g.lineWidth = 6; g.stroke(); g.lineWidth = 4; g.beginPath(); g.moveTo(64, 64); g.lineTo(64, 24); g.moveTo(64, 64); g.lineTo(92, 74); g.stroke(); for (var k = 0; k < 12; k++) { var a = k * Math.PI / 6; g.fillStyle = "#2a2a2a"; g.fillRect(64 + Math.cos(a) * 48 - 3, 64 + Math.sin(a) * 48 - 3, 6, 6); } }) }), -24.9, Y + 1.9, iz0 + 0.06, { rx: 0 });
+      // cream armchairs by the bar side (kept clear of the balcony door x -27.6..-26.5)
+      [-25.6, -24.9].forEach(function (x) { box(x, Y + 0.42, -2.95, 0.6, 0.12, 0.55, cream, { cast: false }); box(x, Y + 0.72, -2.7, 0.6, 0.55, 0.12, cream, { cast: false }); [-0.27, 0.27].forEach(function (o) { box(x + o, Y + 0.55, -2.95, 0.08, 0.3, 0.55, cream, { cast: false }); }); [[-0.25, -0.22], [0.25, -0.22], [-0.25, 0.22], [0.25, 0.22]].forEach(function (o) { box(x + o[0], Y + 0.18, -2.95 + o[1], 0.04, 0.36, 0.04, std(0x3a2a20), { cast: false }); }); addCircle(x, -2.95, 0.32); });
+      // roller blinds over the front windows (half down)
+      var blind = std(0xf3ecdd, { roughness: 0.9 });
+      [[-25.2, 2.2], [-28.2, 0.75]].forEach(function (w) { box(w[0], Y + 1.95, iz1 - 0.06, w[1], 0.55, 0.02, blind, { cast: false }); box(w[0], Y + 2.25, iz1 - 0.07, w[1] + 0.08, 0.07, 0.05, std(0xffffff), { cast: false }); });
+      // wood trim along the ceiling line
+      [[(ix0 + ix1) / 2, iz0 + 0.02, ix1 - ix0, 0.03], [(ix0 + ix1) / 2, iz1 - 0.02, ix1 - ix0, 0.03]].forEach(function (r) { box(r[0], Y + 2.62, r[1], r[2], 0.05, r[3], std(0xc58a4c, { roughness: 0.6 }), { cast: false }); });
     })();
     // 2F walls + stair-hole rail (only on the upper level)
     addRect(C2.x0 - 0.1, C2.x1 + 0.1, iz0 - 0.15, iz0); addRect(C2.x0 - 0.1, C2.x1 + 0.1, iz1, iz1 + 0.15);
@@ -1625,7 +1655,7 @@ window.addEventListener("error", function (e) {
   }
   /* cafe-front tree removed: it reached into the building (user request) */ /* moved off the cafe porch, to the right of the building like the photo */ bareTree(-8.6, -4.6, 0.9); bareTree(22.6, -3.2, 0.9);
   function cypress(x, z, s) { var y = groundH(x, z); var m = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 10), std(0x2b4a2c, { roughness: 1 })); m.position.set(x, y + 2.6 * s, z); m.scale.set(1.3 * s, 2.8 * s, 1.3 * s); m.castShadow = true; scene.add(m); addCircle(x, z, 1.1 * s); }
-  cypress(-35, -2, 1.0); cypress(-34.2, -6.5, 1.15); cypress(-36.5, 2.5, 0.9); cypress(-37.5, -10, 1.1); cypress(24.5, -10, 0.9);
+  /* cypresses beside the cafe removed: the enlarged cafe now stands there (they showed up inside it) */ cypress(24.5, -10, 0.9);
   // pine forest (instanced)
   var pines = [];
   var ptries = 0;
@@ -2007,7 +2037,7 @@ window.addEventListener("error", function (e) {
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = rej; document.head.appendChild(s); }); }
     function makeRoom() {
       var client = window.supabase.createClient(HSV_SUPA.url, HSV_SUPA.key, { realtime: { params: { eventsPerSecond: 20 } } });
-      var api = {}, ch = null, idx = 1, peerCbs = [], connCbs = [], topicCbs = {}, prev = {}, last = null, lastProf = "", lastMv = null, mvT = 0, profT = 0, live = {};
+      var api = {}, ch = null, idx = 1, peerCbs = [], connCbs = [], topicCbs = {}, prev = {}, last = null, subOk = false, lastProf = "", lastMv = null, mvT = 0, profT = 0, live = {};
       function toPeers() { var st = ch ? ch.presenceState() : {}, out = {}; Object.keys(st).forEach(function (k) { if (k === myId) return; var m = st[k] && st[k][0]; if (!m) return; var p = {}; for (var f in m) if (f !== "presence_ref") p[f] = m[f]; out[k] = { peer: k, kind: "viewer", presence: p, sameTab: false, guest: true }; }); return out; }
       function join() {
         var name = "hsv-plaza-" + idx;
@@ -2028,14 +2058,16 @@ window.addEventListener("error", function (e) {
           var d = msg.payload; if (!d || !d.i || d.i === myId || !prev[d.i]) return;
           var m = { x: +d.x, z: +d.z, f: +d.f, j: +d.j || 0, fl: d.fl | 0, sit: d.sit | 0 }; if (!isFinite(m.x) || !isFinite(m.z)) return;
           live[d.i] = m; var p = prev[d.i]; for (var k in m) p.presence[k] = m[k];
+          // fast path: just move the avatar target (no avatar rebuild, no UI refresh 10x a second)
+          if (NET.fastMove && NET.fastMove(d.i, m)) return;
           peerCbs.forEach(function (f) { try { f({ joined: [], left: [], updated: [p] }); } catch (e) { /* ignore */ } });
         });
-        ch.subscribe(function (status) { var ok = status === "SUBSCRIBED"; if (ok && last) ch.track(last); connCbs.forEach(function (f) { try { f(ok); } catch (e) { /* ignore */ } }); });
+        ch.subscribe(function (status) { var ok = status === "SUBSCRIBED"; subOk = ok; if (ok && last) ch.track(last); connCbs.forEach(function (f) { try { f(ok); } catch (e) { /* ignore */ } }); });
         NET.publicRoom = idx;
       }
       function bindTopic(t) { ch.on("broadcast", { event: t }, function (msg) { var pl = msg.payload || {}; if (pl.from === myId) return; (topicCbs[t] || []).forEach(function (f) { try { f({ peer: pl.from, data: pl.data, sameTab: false }); } catch (e) { /* ignore */ } }); }); }
       api.presence = function (patch) {
-        last = patch; if (!ch) return Promise.resolve();
+        last = patch; if (!ch || !subOk) return Promise.resolve(); // never fall back to HTTP sends before the socket is joined
         var now = Date.now(), prof = JSON.stringify({ n: patch.n, lv: patch.lv, av: patch.av, em: patch.em, en: patch.en, sn: patch.sn, st: patch.st, sr: patch.sr, zn: patch.zn });
         // profile/emote/chat changes -> presence (rare); position -> broadcast (fast, only while moving)
         if (prof !== lastProf || now - profT > 8000) { lastProf = prof; profT = now; ch.track(patch); }
@@ -2048,7 +2080,7 @@ window.addEventListener("error", function (e) {
       api.onConnection = function (fn) { connCbs.push(fn); };
       api.peers = function () { var o = toPeers(); return Object.keys(o).map(function (k) { return o[k]; }); };
       // the operator "state" topic stays local in public mode: nobody can take over worship controls
-      api.emit = function (topic, data) { if (topic === "state") return Promise.reject({ code: "not_permitted" }); return ch.send({ type: "broadcast", event: topic, payload: { from: myId, data: data } }); };
+      api.emit = function (topic, data) { if (topic === "state") return Promise.reject({ code: "not_permitted" }); if (!subOk) return Promise.resolve(); return ch.send({ type: "broadcast", event: topic, payload: { from: myId, data: data } }); };
       api.on = function (topic, fn) { if (topic === "state") return; if (!topicCbs[topic]) { topicCbs[topic] = []; if (ch) bindTopic(topic); } topicCbs[topic].push(fn); };
       join(); return api;
     }
@@ -2658,6 +2690,11 @@ window.addEventListener("error", function (e) {
     if (!quiet) chatLine("", o.nick + "님이 나갔어요.", false, true);
     delete NET.peers[id];
   }
+  NET.fastMove = function (id, m) {
+    var o = NET.peers[id]; if (!o) return false;
+    o.tx = num(m.x, WORLD.x0, WORLD.x1, o.tx); o.tz = num(m.z, WORLD.z0, WORLD.z1, o.tz); o.tf = num(m.f, -10, 10, o.tf); o.jy = num(m.j, 0, 4, 0);
+    o.fl = m.fl === 1 ? 1 : m.fl === 2 ? 2 : 0; o.sit = m.sit === 1; return true;
+  };
   function upsertPeer(p) {
     if (!p || p.sameTab || p.kind !== "viewer") return;
     var pr = p.presence || {}; if (pr.x == null || pr.z == null) return;
@@ -2713,7 +2750,7 @@ window.addEventListener("error", function (e) {
     var w = window.innerWidth, h = window.innerHeight, id, o;
     for (id in NET.peers) {
       o = NET.peers[id];
-      var ddx = o.tx - o.x, ddz = o.tz - o.z, dist = Math.hypot(ddx, ddz), k = dist > 8 ? 1 : Math.min(1, dt * 9);
+      var ddx = o.tx - o.x, ddz = o.tz - o.z, dist = Math.hypot(ddx, ddz), k = dist > 8 ? 1 : 1 - Math.exp(-dt * 10);
       o.x += ddx * k; o.z += ddz * k; o.f += angDiff(o.f, o.tf) * Math.min(1, dt * 10);
       var sp = Math.min(8, dist * 9); o.walk += sp * dt * 1.7; var sw = Math.sin(o.walk) * Math.min(1, sp / 4) * 0.8;
       if (o.H) { if (o.sit) { o.H.legL.rotation.x = o.H.legR.rotation.x = -Math.PI / 2; o.H.armL.rotation.x = o.H.armR.rotation.x = -0.45; } else { o.H.legL.rotation.x = sw; o.H.legR.rotation.x = -sw; o.H.armL.rotation.x = -sw * 0.8; o.H.armR.rotation.x = sw * 0.8; } }
@@ -2745,7 +2782,7 @@ window.addEventListener("error", function (e) {
       room.onPeers(function (ch) {
         (ch.left || []).forEach(function (p) { dropPeer(p.peer); });
         (ch.joined || []).forEach(upsertPeer); (ch.updated || []).forEach(upsertPeer);
-        netLabel(); if (panelOpen && document.getElementById("p-chip").textContent === "접속 현황") reopen("net");
+        if ((ch.joined || []).length || (ch.left || []).length) { netLabel(); if (panelOpen && document.getElementById("p-chip").textContent === "접속 현황") reopen("net"); }
       }, off);
     }, off);
   })();
