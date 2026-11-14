@@ -2033,55 +2033,84 @@ window.addEventListener("error", function (e) {
   var HSV_SUPA = { url: "https://mdrrthfpdzjqrxfrojwf.supabase.co", key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kcnJ0aGZwZHpqcXJ4ZnJvandmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ1NzAyMTMsImV4cCI6MjExMDE0NjIxM30.2ACNQKsFkF6vuwoPsNH7p3yLZdfucu7uOU9c6lQBIRY", roomSize: 30 };
   var PUBLIC_MODE = /^https:\/\/.+\.supabase\.co/.test(HSV_SUPA.url) && HSV_SUPA.key.length > 20;
   if (PUBLIC_MODE) (function () {
-    var myId = null; try { myId = localStorage.getItem("hsv_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); localStorage.setItem("hsv_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = rej; document.head.appendChild(s); }); }
+    // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
+    var myId = null;
+    try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
+    var D = window.HSV_DIAG = { build: "1114-1933", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+      sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
+    function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
+    function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
     function makeRoom() {
-      var client = window.supabase.createClient(HSV_SUPA.url, HSV_SUPA.key, { realtime: { params: { eventsPerSecond: 20 } } });
-      var api = {}, ch = null, idx = 1, peerCbs = [], connCbs = [], topicCbs = {}, prev = {}, last = null, subOk = false, lastProf = "", lastMv = null, mvT = 0, profT = 0, live = {};
+      D.lib = "ok";
+      var client = window.supabase.createClient(HSV_SUPA.url, HSV_SUPA.key, { auth: { persistSession: false, autoRefreshToken: false }, realtime: { params: { eventsPerSecond: 20 }, heartbeatIntervalMs: 15000 } });
+      var api = {}, ch = null, idx = 1, peerCbs = [], connCbs = [], topicCbs = {}, prev = {}, last = null, subOk = false, lastProf = "", lastMv = null, mvT = 0, profT = 0, live = {}, retryT = null, closingOn = null;
       function toPeers() { var st = ch ? ch.presenceState() : {}, out = {}; Object.keys(st).forEach(function (k) { if (k === myId) return; var m = st[k] && st[k][0]; if (!m) return; var p = {}; for (var f in m) if (f !== "presence_ref") p[f] = m[f]; out[k] = { peer: k, kind: "viewer", presence: p, sameTab: false, guest: true }; }); return out; }
+      function setConn(ok) { connCbs.forEach(function (f) { try { f(ok); } catch (e) { /* ignore */ } }); }
+      function track(p) { if (!ch || !subOk) return; var t0 = performance.now(); D.tracks++; ch.track(p).then(function (r) { if (r === "ok") D.latency = Math.round(performance.now() - t0); else { D.trackFail++; err("Presence 등록 실패", String(r)); } }, function (e) { D.trackFail++; err("Presence 등록 실패", String(e && e.message || e)); }); }
+      function scheduleRejoin(why) {
+        if (retryT) return; subOk = false; setConn(false); D.channel = "retry"; D.reconnects++;
+        var wait = Math.min(15000, 1000 * Math.pow(2, Math.min(4, D.reconnects - 1)));
+        retryT = setTimeout(function () { retryT = null; try { if (ch) { closingOn = ch; client.removeChannel(ch); } } catch (e) { /* ignore */ } prev = {}; join(); }, wait);
+        err(why, "재접속 " + Math.round(wait / 1000) + "초 후");
+      }
       function join() {
-        var name = "hsv-plaza-" + idx;
-        ch = client.channel(name, { config: { presence: { key: myId }, broadcast: { self: false } } });
+        var name = "hsv-plaza-" + idx; D.room = name; D.channel = "joining";
+        var my = ch = client.channel(name, { config: { presence: { key: myId }, broadcast: { self: false, ack: false } } });
         ch.on("presence", { event: "sync" }, function () {
+          if (ch !== my) return;
           var now = toPeers(), joined = [], left = [], updated = [];
+          D.presence = Object.keys(now).length + 1; D.lastRecv = Date.now();
           Object.keys(now).forEach(function (k) { if (!prev[k]) joined.push(now[k]); else if (JSON.stringify(prev[k].presence) !== JSON.stringify(now[k].presence)) updated.push(now[k]); });
           Object.keys(prev).forEach(function (k) { if (!now[k]) left.push(prev[k]); });
-          // room full -> move to the next public room (only newcomers move)
-          if (Object.keys(now).length >= HSV_SUPA.roomSize && Object.keys(prev).length === 0 && idx < 20) { var old = ch; idx++; prev = {}; old.unsubscribe(); join(); return; }
-          // keep the freshest position we heard over broadcast
+          if (Object.keys(now).length >= HSV_SUPA.roomSize && Object.keys(prev).length === 0 && idx < 20) { closingOn = ch; idx++; prev = {}; client.removeChannel(my); join(); return; }
           joined.concat(updated).forEach(function (p) { var l = live[p.peer]; if (l) for (var f in l) p.presence[f] = l[f]; });
           left.forEach(function (p) { delete live[p.peer]; });
           prev = now; peerCbs.forEach(function (f) { try { f({ joined: joined, left: left, updated: updated }); } catch (e) { /* ignore */ } });
         });
         Object.keys(topicCbs).forEach(function (t) { bindTopic(t); });
         ch.on("broadcast", { event: "mv" }, function (msg) {
-          var d = msg.payload; if (!d || !d.i || d.i === myId || !prev[d.i]) return;
+          if (ch !== my) return;
+          var d = msg.payload; if (!d || !d.i || d.i === myId) return;
+          D.recv++; D.lastRecv = Date.now();
+          if (!prev[d.i]) return; // presence for this peer not synced yet; the next sync brings it
           var m = { x: +d.x, z: +d.z, f: +d.f, j: +d.j || 0, fl: d.fl | 0, sit: d.sit | 0 }; if (!isFinite(m.x) || !isFinite(m.z)) return;
           live[d.i] = m; var p = prev[d.i]; for (var k in m) p.presence[k] = m[k];
-          // fast path: just move the avatar target (no avatar rebuild, no UI refresh 10x a second)
           if (NET.fastMove && NET.fastMove(d.i, m)) return;
           peerCbs.forEach(function (f) { try { f({ joined: [], left: [], updated: [p] }); } catch (e) { /* ignore */ } });
         });
-        ch.subscribe(function (status) { var ok = status === "SUBSCRIBED"; subOk = ok; if (ok && last) ch.track(last); connCbs.forEach(function (f) { try { f(ok); } catch (e) { /* ignore */ } }); });
+        var subTimer = setTimeout(function () { if (ch === my && !subOk) scheduleRejoin("채널 구독 시간 초과"); }, 15000);
+        ch.subscribe(function (status, e) {
+          if (ch !== my) return;
+          D.channel = status;
+          if (status === "SUBSCRIBED") { clearTimeout(subTimer); subOk = true; D.joinedAt = Date.now(); D.problem = ""; D.reconnects = Math.max(0, D.reconnects); setConn(true); if (last) { lastProf = ""; api.presence(last); } }
+          else if (status === "CHANNEL_ERROR") { clearTimeout(subTimer); scheduleRejoin("채널 구독 실패" + (e && e.message ? " (" + e.message + ")" : "")); }
+          else if (status === "TIMED_OUT") { clearTimeout(subTimer); scheduleRejoin("연결 시간 초과"); }
+          else if (status === "CLOSED") { if (closingOn === my) return; scheduleRejoin("연결 끊김"); }
+        });
         NET.publicRoom = idx;
       }
-      function bindTopic(t) { ch.on("broadcast", { event: t }, function (msg) { var pl = msg.payload || {}; if (pl.from === myId) return; (topicCbs[t] || []).forEach(function (f) { try { f({ peer: pl.from, data: pl.data, sameTab: false }); } catch (e) { /* ignore */ } }); }); }
+      function bindTopic(t) { var my = ch; ch.on("broadcast", { event: t }, function (msg) { if (ch !== my) return; var pl = msg.payload || {}; if (pl.from === myId) return; D.recv++; D.lastRecv = Date.now(); (topicCbs[t] || []).forEach(function (f) { try { f({ peer: pl.from, data: pl.data, sameTab: false }); } catch (e) { /* ignore */ } }); }); }
+      function send(event, payload) { if (!ch || !subOk) return Promise.resolve(); D.sent++; return ch.send({ type: "broadcast", event: event, payload: payload }).then(function (r) { if (r !== "ok") err("Broadcast 송신 실패", String(r)); return r; }); }
       api.presence = function (patch) {
         last = patch; if (!ch || !subOk) return Promise.resolve(); // never fall back to HTTP sends before the socket is joined
         var now = Date.now(), prof = JSON.stringify({ n: patch.n, lv: patch.lv, av: patch.av, em: patch.em, en: patch.en, sn: patch.sn, st: patch.st, sr: patch.sr, zn: patch.zn });
-        // profile/emote/chat changes -> presence (rare); position -> broadcast (fast, only while moving)
-        if (prof !== lastProf || now - profT > 8000) { lastProf = prof; profT = now; ch.track(patch); }
+        // Presence = who is here + profile (rare). Position = Broadcast (fast, only while moving).
+        if (prof !== lastProf || now - profT > 20000) { lastProf = prof; profT = now; track(patch); }
         var mv = { i: myId, x: patch.x, z: patch.z, f: patch.f, j: patch.j, fl: patch.fl, sit: patch.sit };
         var moved = !lastMv || Math.abs(mv.x - lastMv.x) > 0.02 || Math.abs(mv.z - lastMv.z) > 0.02 || Math.abs(mv.f - lastMv.f) > 0.05 || mv.j !== lastMv.j || mv.sit !== lastMv.sit || mv.fl !== lastMv.fl;
-        if (moved || now - mvT > 1500) { lastMv = mv; mvT = now; return ch.send({ type: "broadcast", event: "mv", payload: mv }); }
+        if (moved || now - mvT > 1500) { lastMv = mv; mvT = now; return send("mv", mv); }
         return Promise.resolve();
       };
+      // idle players still announce themselves: re-send position every 2 s even when the game loop is quiet (background tab, standing still)
+      setInterval(function () { if (subOk && last) { var now = Date.now(); if (now - mvT > 2000) { mvT = now; send("mv", { i: myId, x: last.x, z: last.z, f: last.f, j: 0, fl: last.fl, sit: last.sit }); } } }, 1000);
+      document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible" && (!subOk || (ch && ch.state !== "joined"))) scheduleRejoin("앱 복귀 후 재연결"); });
+      window.addEventListener("online", function () { if (!subOk) scheduleRejoin("네트워크 복구"); });
       api.onPeers = function (fn) { peerCbs.push(fn); };
       api.onConnection = function (fn) { connCbs.push(fn); };
       api.peers = function () { var o = toPeers(); return Object.keys(o).map(function (k) { return o[k]; }); };
-      // the operator "state" topic stays local in public mode: nobody can take over worship controls
-      api.emit = function (topic, data) { if (topic === "state") return Promise.reject({ code: "not_permitted" }); if (!subOk) return Promise.resolve(); return ch.send({ type: "broadcast", event: topic, payload: { from: myId, data: data } }); };
+      api.emit = function (topic, data) { if (topic === "state") return Promise.reject({ code: "not_permitted" }); return send(topic, { from: myId, data: data }); };
       api.on = function (topic, fn) { if (topic === "state") return; if (!topicCbs[topic]) { topicCbs[topic] = []; if (ch) bindTopic(topic); } topicCbs[topic].push(fn); };
+      try { client.realtime.onOpen(function () { D.socket = "open"; }); client.realtime.onClose(function () { D.socket = "closed"; }); client.realtime.onError(function (e) { D.socket = "error"; err("프로젝트 연결 실패", "WebSocket"); }); } catch (e) { /* older lib */ }
       join(); return api;
     }
     var roomP = null;
@@ -2674,7 +2703,19 @@ window.addEventListener("error", function (e) {
   function mask(s) { BAD.forEach(function (w) { s = s.split(w).join("**"); }); return s; }
   var netBtn = document.getElementById("btn-net"), chatBtn = document.getElementById("btn-chat"), chatBox = document.getElementById("chatbox"), chatLog = document.getElementById("chat-log"), chatIn = document.getElementById("chat-in");
   function peerCount() { var n = 0; for (var k in NET.peers) n++; return n; }
-  function netLabel2() { var pill = document.getElementById("net-pill"); if (!pill) return; pill.textContent = NET.state === "on" ? (peerCount() + 1) + "명 접속" : NET.state === "off" ? "혼자" : "연결 중"; pill.classList.toggle("on", NET.state === "on"); var c2 = document.getElementById("btn-chat2"); if (c2) c2.textContent = chatBtn.textContent; }
+  function netLabel2() { var pill = document.getElementById("net-pill"); if (!pill) return; pill.textContent = NET.state === "on" ? "실제 접속 " + (peerCount() + 1) + "명" + (window.HSV_DIAG ? " / 정원 " + HSV_DIAG.cap + "명" : "") : NET.state === "off" ? "혼자" : "연결 중"; pill.classList.toggle("on", NET.state === "on"); var c2 = document.getElementById("btn-chat2"); if (c2) c2.textContent = chatBtn.textContent; }
+  // operator-only network diagnostics: open the site with ?diag=hansarang (never shown to normal visitors)
+  (function diagPanel() {
+    if (!/[?&]diag=hansarang\b/.test(location.search) || !window.HSV_DIAG) return;
+    var box = document.createElement("div");
+    box.style.cssText = "position:fixed;left:8px;bottom:8px;z-index:9999;background:rgba(10,14,28,.88);color:#e8f0ff;font:12px/1.45 ui-monospace,Menlo,monospace;padding:10px 12px;border-radius:8px;max-width:min(360px,92vw);pointer-events:none;white-space:pre-wrap";
+    document.body.appendChild(box);
+    setInterval(function () {
+      var D = HSV_DIAG, ago = D.lastRecv ? Math.round((Date.now() - D.lastRecv) / 1000) + "초 전" : "없음";
+      var cause = D.lib !== "ok" ? "라이브러리 로드 중/실패" : D.socket === "error" ? "프로젝트 연결 실패" : D.channel !== "SUBSCRIBED" ? "채널 구독 대기/실패 (" + D.channel + ")" : D.trackFail ? "Presence 등록 실패" : (D.presence > 1 && !D.recv) ? "상대방 데이터 수신 실패" : "정상";
+      box.textContent = "HSV 진단 · build " + D.build + "\n프로젝트 " + D.project + " · 소켓 " + D.socket + "\n채널 " + D.channel + " · 방 " + D.room + "\n내 ID " + D.myId + "\nPresence 실제 " + D.presence + "명 / 정원 " + D.cap + "\n송신 " + D.sent + " · 수신 " + D.recv + " · 마지막 수신 " + ago + "\nPresence 등록 " + D.tracks + " (실패 " + D.trackFail + ") · 지연 " + (D.latency < 0 ? "-" : D.latency + "ms") + "\n재접속 " + D.reconnects + "회\n판정: " + cause + (D.errors.length ? "\n오류:\n · " + D.errors.slice(0, 4).join("\n · ") : "");
+    }, 1000);
+  })();
   function netLabel() { setTimeout(netLabel2, 0);
     netBtn.textContent = NET.state === "on" ? "접속 " + (peerCount() + 1) + "명" : NET.state === "wait" ? "접속 확인 중" : NET.state === "retry" ? "다시 연결 중" : "혼자 플레이";
     netBtn.setAttribute("aria-pressed", NET.state === "on" ? "true" : "false");
