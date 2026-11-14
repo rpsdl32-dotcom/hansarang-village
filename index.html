@@ -2164,7 +2164,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1114-2306", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1114-2309", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -5196,7 +5196,7 @@ window.addEventListener("error", function (e) {
     return { open: open, close: close, state: S, roll: roll, totals: totals };
   })();
   if (/[?&]diag=hansarang\b/.test(location.search)) window.__bowl = BOWL;
-  if (/[?&]diag=hansarang\b/.test(location.search)) { window.__tp = function (x, z, y, f) { player.x = x; player.z = z; player.y = y || 0; player.face = f || 0; cam.yaw = player.face; snapCam = true; }; window.__geo = { SANCT: SANCT, Y2: Y2 }; window.__av = function (k, v) { G.av[k] = v; rebuildAvatar(); }; }
+  if (/[?&]diag=hansarang\b/.test(location.search)) { window.__tp = function (x, z, y, f) { player.x = x; player.z = z; player.y = y || 0; player.face = f || 0; cam.yaw = player.face; snapCam = true; }; window.__geo = { SANCT: SANCT, Y2: Y2 }; window.__av = function (k, v) { G.av[k] = v; rebuildAvatar(); }; window.__lead = function (i) { leadSpeak(i); return LEAD[i] ? LEAD[i].length : 0; }; }
   EXTRA_ACTIONS.bowling = function () {
     var d = new Date(), day = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
     if (G.bowlVisit !== day) { G.bowlVisit = day; saveG(); gain(10, 10); }
@@ -6005,13 +6005,30 @@ window.addEventListener("error", function (e) {
   ORDER.forEach(function (it) { var s = el("div", "seg-i"); s.appendChild(el("b")); wBar.appendChild(s); wNames.appendChild(el("span", null, it.title)); });
   if (CHURCH.worshipVideo) { $("#w-video").href = CHURCH.worshipVideo; $("#w-video").hidden = false; }
   function elapsed() { return W.paused ? W.pausedAt : Synth.now() - W.start; }
-  function startSection(i) { W.idx = i; W.start = Synth.now(); W.pausedAt = 0; W.done = false; Synth.setStyle(ORDER[i].style); setScreen({ mode: "live", idx: i }); renderCard(); }
-  function finishProgram() { Synth.stop(); W.paused = true; W.done = true; W.pausedAt = 0; setScreen({ mode: "done" }); renderCard(); }
+  /* AI worship leader: after the praise song, a synthesised voice (clearly labelled AI, not the real pastor)
+     leads prayer, reading, a short message and the benediction. Uses the browser's own Korean voice. */
+  var LEAD = {
+    2: ["대표 기도 시간입니다. 다 함께 고요히 머리 숙이겠습니다.", "사랑의 하나님, 한 주 동안 지켜 주셔서 감사합니다.", "이 자리에 모인 한 사람 한 사람의 마음을 만져 주시고, 서로를 더 깊이 사랑하게 하옵소서.", "예수님의 이름으로 기도합니다. 아멘."],
+    3: ["성경 봉독이 있겠습니다. 요한복음 십삼 장 삼십사 절 말씀입니다.", "새 계명을 너희에게 주노니 서로 사랑하라.", "내가 너희를 사랑한 것같이 너희도 서로 사랑하라.", "아멘."],
+    4: ["오늘 말씀의 제목은 서로 사랑하라 입니다.", "사랑은 거창한 일에서 시작되지 않습니다. 오늘 옆자리에 앉은 사람의 이름을 불러 주는 데서 시작됩니다.", "예수님은 우리가 완벽해서가 아니라, 있는 모습 그대로 우리를 먼저 사랑하셨습니다.", "그 사랑을 받은 우리가 이번 한 주, 한 사람에게 먼저 다가가는 공동체가 되기를 바랍니다.", "함께 기도하겠습니다. 한 사랑으로 한 몸 되게 하옵소서. 아멘."],
+    5: ["축도하겠습니다.", "이제는 우리 주 예수 그리스도의 은혜와 하나님의 사랑과 성령의 교통하심이 여러분 모두와 함께 영원히 있기를 축원합니다.", "평안히 가십시오."]
+  };
+  var leadVoice = null;
+  function pickLeadVoice() { try { var vs = speechSynthesis.getVoices().filter(function (v) { return /ko/i.test(v.lang); }); leadVoice = vs.filter(function (v) { return /male|남|InJoon|Hyunsu|Bong/i.test(v.name) && !/female|여/i.test(v.name); })[0] || vs[0] || null; } catch (e) { leadVoice = null; } }
+  function leadStop() { try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) { /* ignore */ } }
+  function leadSpeak(i) {
+    leadStop(); var lines = LEAD[i]; if (!lines || !window.speechSynthesis || W.file) return;
+    if (!leadVoice) pickLeadVoice();
+    lines.forEach(function (t, n) { var u = new SpeechSynthesisUtterance(t); u.lang = "ko-KR"; if (leadVoice) u.voice = leadVoice; u.rate = 0.88; u.pitch = 0.82; u.volume = 1; if (n === 0) u.onstart = function () { Synth.duck && Synth.duck(true); }; if (n === lines.length - 1) u.onend = function () { Synth.duck && Synth.duck(false); }; speechSynthesis.speak(u); });
+  }
+  if (window.speechSynthesis) try { speechSynthesis.onvoiceschanged = pickLeadVoice; } catch (e) { /* ignore */ }
+  function startSection(i) { W.idx = i; W.start = Synth.now(); W.pausedAt = 0; W.done = false; Synth.setStyle(ORDER[i].style); setScreen({ mode: "live", idx: i }); renderCard(); leadSpeak(i); }
+  function finishProgram() { leadStop(); Synth.stop(); W.paused = true; W.done = true; W.pausedAt = 0; setScreen({ mode: "done" }); renderCard(); }
   function renderCard() {
     var it = ORDER[W.idx];
     if (W.file) { $("#w-step").textContent = "예배 녹음 재생"; $("#w-title").textContent = "내 예배 녹음"; $("#w-sub").textContent = W.fileName; wPlay.textContent = W.file.paused ? "이어서 듣기" : "잠시 멈춤"; wNext.textContent = "자동 반주로 돌아가기"; }
     else if (W.done) { $("#w-step").textContent = "주일 예배 · 마침"; $("#w-title").textContent = "예배를 마쳤습니다"; $("#w-sub").textContent = "평안히 가십시오. 다시 드리려면 처음부터 다시를 누르세요."; wPlay.textContent = "처음부터 다시"; wNext.textContent = "다음 순서"; }
-    else { $("#w-step").textContent = "주일 예배 · " + (W.idx + 1) + " / " + ORDER.length; $("#w-title").textContent = it.title; $("#w-sub").textContent = it.verse ? it.sub + " · " + it.verse : it.sub; wPlay.textContent = W.paused ? "이어서 듣기" : "잠시 멈춤"; wNext.textContent = W.idx === ORDER.length - 1 ? "예배 마치기" : "다음 순서"; }
+    else { $("#w-step").textContent = "주일 예배 · " + (W.idx + 1) + " / " + ORDER.length + (LEAD[W.idx] ? " · AI 음성 인도 (실제 목사님 음성 아님)" : ""); $("#w-title").textContent = it.title; $("#w-sub").textContent = it.verse ? it.sub + " · " + it.verse : it.sub; wPlay.textContent = W.paused ? "이어서 듣기" : "잠시 멈춤"; wNext.textContent = W.idx === ORDER.length - 1 ? "예배 마치기" : "다음 순서"; }
     wNext.disabled = W.done && !W.file;
     Array.prototype.forEach.call(wNames.children, function (s, i) { s.classList.toggle("cur", !W.file && !W.done && i === W.idx); });
     updateProgress();
@@ -6026,8 +6043,8 @@ window.addEventListener("error", function (e) {
   function playPause() {
     if (W.file) { if (W.file.paused) W.file.play().catch(function () {}); else W.file.pause(); renderCard(); return; }
     if (W.done) { W.paused = false; Synth.start(); startSection(0); return; }
-    if (W.paused) { W.paused = false; W.start = Synth.now() - W.pausedAt; Synth.start(); Synth.setStyle(ORDER[W.idx].style); }
-    else { W.pausedAt = elapsed(); W.paused = true; Synth.stop(); }
+    if (W.paused) { W.paused = false; W.start = Synth.now() - W.pausedAt; Synth.start(); Synth.setStyle(ORDER[W.idx].style); try { if (speechSynthesis.paused) speechSynthesis.resume(); else if (!speechSynthesis.speaking) leadSpeak(W.idx); } catch (e) { /* ignore */ } }
+    else { W.pausedAt = elapsed(); W.paused = true; Synth.stop(); try { speechSynthesis.pause(); } catch (e) { /* ignore */ } }
     renderCard();
   }
   function nextSection() {
