@@ -227,6 +227,28 @@ ol.tl .s { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: 
 .drink-pic { display: block; width: 100%; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 4px; margin: 0 0 6px; background: #eadcc8; }
 .p-link { display: inline-block; margin: 0 0 16px; color: var(--blue); font-weight: 600; font-size: 14px; }
 
+/* ---- cinematic opening (prologue) ---- */
+body.pro-on > :not(#pro):not(#scene):not(script):not(style):not(#intro) { visibility: hidden !important; }
+#pro { position: fixed; inset: 0; z-index: 6; pointer-events: none; color: #fff; font-family: var(--font-display); }
+#pro .bar { position: absolute; left: 0; right: 0; height: 9vh; background: #05070d; transition: height 1.2s ease; }
+#pro .bar.t { top: 0; } #pro .bar.b { bottom: 0; }
+#pro.open .bar { height: 0; }
+#pro .top { position: absolute; top: calc(12px + env(safe-area-inset-top)); right: 14px; display: flex; gap: 8px; pointer-events: auto; }
+#pro .top button { background: rgba(8,12,24,.45); color: #fff; border: 1px solid rgba(255,255,255,.35); border-radius: 999px; padding: 8px 14px; font: 600 13px var(--font-ui, sans-serif); cursor: pointer; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+#pro .mid { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-58%); text-align: center; padding: 0 20px; opacity: 0; transition: opacity 1.6s ease, transform 1.6s ease; }
+#pro.title .mid { opacity: 1; transform: translateY(-50%); }
+#pro .eb { font: 600 12px var(--font-ui, sans-serif); letter-spacing: .32em; text-transform: uppercase; opacity: .85; text-shadow: 0 2px 12px rgba(0,0,0,.6); }
+#pro h1 { font-size: clamp(42px, 9vw, 86px); margin: 10px 0 6px; font-weight: 700; letter-spacing: .02em; text-shadow: 0 6px 30px rgba(0,0,0,.55), 0 1px 0 rgba(0,0,0,.4); }
+#pro .sub { font: 500 15px var(--font-ui, sans-serif); opacity: .9; text-shadow: 0 2px 10px rgba(0,0,0,.6); }
+#pro .acts { margin-top: 26px; display: flex; flex-direction: column; align-items: center; gap: 10px; opacity: 0; transition: opacity 1s ease .6s; pointer-events: none; }
+#pro.title .acts { opacity: 1; pointer-events: auto; }
+#pro .acts .main { background: #fff; color: #14203d; border: 0; border-radius: 999px; padding: 15px 38px; font: 700 17px var(--font-ui, sans-serif); cursor: pointer; box-shadow: 0 10px 34px rgba(0,0,0,.35); }
+#pro .acts .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+#pro .acts .row button { background: rgba(8,12,24,.5); color: #fff; border: 1px solid rgba(255,255,255,.4); border-radius: 999px; padding: 10px 16px; font: 600 14px var(--font-ui, sans-serif); cursor: pointer; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+#pro .foot { position: absolute; left: 0; right: 0; bottom: calc(16px + env(safe-area-inset-bottom)); text-align: center; font: 500 13px/1.6 var(--font-ui, sans-serif); opacity: 0; transition: opacity 1.4s ease 1s; text-shadow: 0 2px 10px rgba(0,0,0,.7); padding: 0 16px; }
+#pro.title .foot { opacity: .95; }
+#pro .foot q { font-family: var(--font-display); font-size: 16px; quotes: "\201C" "\201D"; }
+#pro .cap { position: absolute; left: 0; right: 0; bottom: 13vh; text-align: center; font: 600 15px var(--font-ui, sans-serif); letter-spacing: .08em; opacity: 0; transition: opacity .8s ease; text-shadow: 0 2px 12px rgba(0,0,0,.7); }
 #intro { position: fixed; inset: 0; z-index: 5; display: grid; place-items: center; background: rgba(10,16,32,0.55); padding: 16px; box-sizing: border-box; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
 #intro .card2 { background: var(--paper); color: var(--ink); border-radius: 8px; width: min(440px, 100%); box-sizing: border-box; box-shadow: 0 24px 70px rgba(0,0,0,0.45); max-height: 100%; overflow-y: auto; }
 #intro .hero { width: 100%; aspect-ratio: 16 / 8; object-fit: cover; display: block; border-radius: 8px 8px 0 0; background: #c9d2dc; }
@@ -421,6 +443,14 @@ body.touch .kbd-only { display: none; }
   <div id="panel-body"></div>
 </aside>
 
+<div id="pro" aria-live="polite"><div class="bar t"></div><div class="bar b"></div>
+  <div class="top"><button type="button" id="pro-snd">소리 켜기</button><button type="button" id="pro-skip">건너뛰기 ›</button></div>
+  <div class="cap" id="pro-cap"></div>
+  <div class="mid"><div class="eb">목포한사랑교회 · 누구나 오는 열린 마을</div><h1>한사랑 마을</h1><div class="sub">회원가입 없이, 링크 하나로 함께 걷는 3D 마을</div>
+    <div class="acts"><button type="button" class="main" id="pro-go">문 열고 들어가기</button>
+      <div class="row"><button type="button" id="pro-quiet">소리 없이 들어가기</button><button type="button" id="pro-avatar">아바타 만들기</button><button type="button" id="pro-info">안내 보기</button></div></div></div>
+  <div class="foot" id="pro-foot"></div>
+</div>
 <div id="intro">
   <div class="card2">
     <img class="hero" id="intro-img" alt="목포한사랑교회와 아셀카페 항공 사진">
@@ -2036,7 +2066,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1114-1936", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1114-1948", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -5918,6 +5948,56 @@ window.addEventListener("error", function (e) {
   $("#go-tour").addEventListener("click", function () { enterWorld("tour"); });
   $("#go-friends").addEventListener("click", function () { started || enterWorld("go"); setTimeout(function () { openPanel("friends"); }, 350); });
   setTimeout(function () { try { go.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 50);
+
+  /* ============================================================
+     CINEMATIC OPENING: sunset fly-in over Samhak-ro to the church,
+     then the title. Skippable; the old intro card stays as "안내 보기".
+     ============================================================ */
+  var PRO = { on: true, t: 0, shot: 0, done: false, prevTod: curTod, eye: new THREE.Vector3(), tgt: new THREE.Vector3(), cap: "" };
+  (function prologue() {
+    var pro = $("#pro"), intro = $("#intro"), capEl = $("#pro-cap");
+    var seen = false; try { seen = localStorage.getItem("hsv_pro_seen") === "1"; } catch (e) { /* ignore */ }
+    var SHOTS = [ // [eye], [target], seconds, caption
+      [[90, 80, 170], [0, 2, 30], 5.5, "전라남도 목포 · 삼학로"],
+      [[-58, 22, 70], [-30, 4, 26], 5.0, "대화볼링장 · 신안 아파트"],
+      [[-40, 15, 22], [-30, 3, -3], 4.5, "아셀카페"],
+      [[14, 13, 30], [-4, 6, -10], 4.5, "목포한사랑교회"],
+      [[9, 6.5, 17], [-4, 8.5, -12], 4.0, ""]];
+    if (seen) SHOTS = SHOTS.slice(2);
+    intro.style.display = "none"; document.body.classList.add("pro-on");
+    if (curTod === "day") setTod("dusk");
+    var ease = function (x) { return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+    var A = new THREE.Vector3(), B = new THREE.Vector3(), C = new THREE.Vector3(), Dv = new THREE.Vector3();
+    function showTitle() { if (pro.classList.contains("title")) return; pro.classList.add("open", "title"); capEl.style.opacity = "0"; try { localStorage.setItem("hsv_pro_seen", "1"); } catch (e) { /* ignore */ }
+      var v = VERSES[(new Date().getFullYear() * 372 + new Date().getMonth() * 31 + new Date().getDate()) % VERSES.length], nx = null; try { nx = nextService(); } catch (e) { /* ignore */ }
+      $("#pro-foot").innerHTML = ""; var q = document.createElement("q"); q.textContent = v[1]; var f = $("#pro-foot"); f.appendChild(document.createTextNode("오늘의 말씀 · " + v[0])); f.appendChild(document.createElement("br")); f.appendChild(q);
+      if (nx) { f.appendChild(document.createElement("br")); f.appendChild(document.createTextNode("다음 예배 · " + (nx.n || nx.name || "") + " " + fmtLeft(nx.t - new Date()) + " 후")); } }
+    tickers.push(function (dt) {
+      if (!PRO.on) return;
+      PRO.t += dt || 0.016;
+      var sh = SHOTS[Math.min(PRO.shot, SHOTS.length - 1)], last = PRO.shot >= SHOTS.length - 1;
+      if (!last && PRO.t >= sh[2]) { PRO.t = 0; PRO.shot++; sh = SHOTS[PRO.shot]; last = PRO.shot >= SHOTS.length - 1; }
+      var nxt = SHOTS[Math.min(PRO.shot + 1, SHOTS.length - 1)], k = last ? 0 : ease(Math.min(1, PRO.t / sh[2]));
+      A.fromArray(sh[0]); B.fromArray(nxt[0]); C.fromArray(sh[1]); Dv.fromArray(nxt[1]);
+      PRO.eye.lerpVectors(A, B, k); PRO.tgt.lerpVectors(C, Dv, k);
+      if (last) { var a = PRO.t * 0.05; PRO.eye.set(-4 + Math.sin(a) * 13.5, 6.5 + Math.sin(PRO.t * 0.3) * 0.3, -12 + Math.cos(a) * 29); showTitle(); }
+      camera.position.copy(PRO.eye); camera.lookAt(PRO.tgt);
+      var cap = last ? "" : sh[3]; if (cap !== PRO.cap) { PRO.cap = cap; capEl.style.opacity = "0"; setTimeout(function () { capEl.textContent = PRO.cap; capEl.style.opacity = PRO.cap ? "1" : "0"; }, 350); }
+    });
+    function finish(how, quiet) {
+      if (PRO.done) return; PRO.done = true; PRO.on = false; pro.style.transition = "opacity .6s"; pro.style.opacity = "0"; setTimeout(function () { pro.style.display = "none"; }, 650); document.body.classList.remove("pro-on");
+      if (curTod === "dusk" && PRO.prevTod === "day") setTod("day");
+      if (quiet) { bgmOn = false; var bb = document.getElementById("btn-bgm"); if (bb) bb.setAttribute("aria-pressed", "false"); }
+      if (how === "info") { intro.style.display = ""; return; }
+      enterWorld(how);
+    }
+    $("#pro-skip").addEventListener("click", function () { if (!pro.classList.contains("title")) { PRO.shot = SHOTS.length - 1; PRO.t = 0; } else finish("go"); });
+    $("#pro-snd").addEventListener("click", function () { try { Synth.unlock(); if (!Synth.running()) bgmResume(); } catch (e) { /* ignore */ } this.textContent = "소리 켜짐 ♪"; });
+    $("#pro-go").addEventListener("click", function () { finish("go"); });
+    $("#pro-quiet").addEventListener("click", function () { finish("go", true); });
+    $("#pro-avatar").addEventListener("click", function () { finish("avatar"); });
+    $("#pro-info").addEventListener("click", function () { finish("info"); });
+  })();
   requestAnimationFrame(frame);
 })();
 </script>
