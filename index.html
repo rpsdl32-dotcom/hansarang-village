@@ -1449,13 +1449,14 @@ window.addEventListener("error", function (e) {
   box(-25.2, C2.y0 + 1.7, C2.z1 + 0.06, 2.4, 1.05, 0.04, M.darkGlass, { cast: false });
   box(-28.2, C2.y0 + 1.6, C2.z1 + 0.06, 0.85, 1.55, 0.04, M.darkGlass, { cast: false });
   box(C2.x1 + 0.03, C2.y0 + 1.7, -5, 0.06, 1.1, 1.6, M.darkGlass, { cast: false });
+  var CAFE_ROOF = [];
   (function roof() {
     var span = C2.x1 - C2.x0, half = span / 2 + 0.5, pitch = 0.55, rise = (span / 2) * Math.tan(pitch);
     var len = half / Math.cos(pitch), depth = C2.z1 - C2.z0 + 1.0, top = C2.y0 + C2.h, cx = (C2.x0 + C2.x1) / 2, cz = (C2.z0 + C2.z1) / 2;
     [-1, 1].forEach(function (s) {
       var g = worldUV(new THREE.BoxGeometry(len, 0.14, depth), 1.2);
       var m = new THREE.Mesh(g, M.roof); m.position.set(cx + s * (half / 2 - 0.25), top + rise / 2 + 0.05, cz); m.rotation.z = -s * pitch;
-      m.castShadow = true; m.receiveShadow = true; scene.add(m); occluders.push(m);
+      m.castShadow = true; m.receiveShadow = true; scene.add(m); occluders.push(m); CAFE_ROOF.push(m);
     });
     var sh = new THREE.Shape(); sh.moveTo(-span / 2, 0); sh.lineTo(span / 2, 0); sh.lineTo(0, rise); sh.lineTo(-span / 2, 0);
     [C2.z1 - 0.15, C2.z0 + 0.0].forEach(function (z) {
@@ -2164,7 +2165,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1114-2309", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1114-2313", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -5810,6 +5811,14 @@ window.addEventListener("error", function (e) {
     [CF, CI, C2].forEach(function (r) { r.x0 = sx(r.x0); r.x1 = sx(r.x1); r.z0 = sz(r.z0); if (r.z1 < PZ) r.z1 = sz(r.z1); });
     CAFE2.x0 = sx(CAFE2.x0); CAFE2.x1 = sx(CAFE2.x1); CAFE2.sx0 = sx(CAFE2.sx0); CAFE2.sx1 = sx(CAFE2.sx1); CAFE2.z0 = sz(CAFE2.z0); CAFE2.z1 = sz(CAFE2.z1); CAFE2.sz0 = sz(CAFE2.sz0); CAFE2.sz1 = sz(CAFE2.sz1);
     ZONES.forEach(function (z) { if (z.id === "cafe") { z.x0 = CI.x0; z.x1 = CI.x1; z.z0 = CI.z0; z.z1 = CI.z1; } });
+    // Blender cafe roof (caferoof.glb): corrugated dark tiles, ridge cap, white fascia + soffits; built at the final (scaled) size
+    if (THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load("caferoof.glb?v=1", function (gl) {
+      var top = C2.y0 + C2.h, cx = (C2.x0 + C2.x1) / 2, cz = (C2.z0 + C2.z1) / 2;
+      gl.scene.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      gl.scene.position.set(cx, top, cz); scene.add(gl.scene);
+      CAFE_ROOF.forEach(function (m) { m.visible = false; });
+      if (window.HSV_DIAG) HSV_DIAG.cafeRoof = [cx, top, cz, C2.x0, C2.x1, C2.z0, C2.z1].map(function (v) { return Math.round(v * 100) / 100; });
+    }); } catch (e) { /* keep code roof */ }
 
     // ---- parking strip between the cafe and the church (x -24..-14.5)
     var stripeM = std(0xf2f2ee, { roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
