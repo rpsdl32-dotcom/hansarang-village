@@ -2066,7 +2066,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1114-1959", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1114-2007", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -5919,7 +5919,8 @@ window.addEventListener("error", function (e) {
     if (mode === "worship" && !W.file && !W.paused && !W.done && elapsed() >= ORDER[W.idx].dur) nextSection();
     cardTick += dt; if (mode === "worship" && cardTick > 0.2) { cardTick = 0; updateProgress(); }
     mmTick += dt; if (mmTick > 0.06) { mmTick = 0; drawMinimap(); }
-    for (var tk = 0; tk < tickers.length; tk++) tickers[tk](dt);
+    // one failing system must never stop the others or the picture: isolate each ticker, report once
+    for (var tk = 0; tk < tickers.length; tk++) { try { tickers[tk](dt); } catch (te) { if (!tickers[tk].__err) { tickers[tk].__err = 1; if (window.console) console.error("[HSV ticker " + tk + "]", te); if (window.HSV_DIAG) HSV_DIAG.errors.unshift("게임 루프 오류 #" + tk + " · " + (te && te.message)); } } }
     renderer.render(scene, camera);
   }
 
