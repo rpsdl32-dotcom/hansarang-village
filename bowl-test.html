@@ -307,6 +307,13 @@ body.touch .kbd-only { display: none; }
   #side > .row:first-child { flex-wrap: nowrap; gap: 5px; }
   #side .chip, #side [id^=net] { white-space: nowrap; }
   #minimap { width: 128px; height: 78px; }
+  #side { max-width: 58vw; align-items: flex-end; }
+  #side > .row:first-child { flex-wrap: wrap; justify-content: flex-end; row-gap: 5px; }
+  #net-pill { order: 9; font-size: 11px; padding: 3px 8px; }
+  #stamps { max-width: 38vw; }
+  #stamps .head { font-size: 10.5px; }
+  #toast { top: auto; bottom: calc(var(--pb) + 230px); max-width: 80vw; }
+  #act { bottom: calc(var(--pb) + 150px); }
 }
 @media (prefers-reduced-motion: reduce) { #panel, #fade, #zone { transition: none; } .pop { animation-duration: 0.01s; } #flash.on { animation: none; } }
 </style>
@@ -2083,7 +2090,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1114-2111", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1114-2115", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -2983,8 +2990,12 @@ window.addEventListener("error", function (e) {
     if (!/[?&]diag=hansarang\b/.test(location.search) || !window.HSV_DIAG) return;
     var box = document.createElement("div");
     box.style.cssText = "position:fixed;left:8px;bottom:8px;z-index:9999;background:rgba(10,14,28,.88);color:#e8f0ff;font:12px/1.45 ui-monospace,Menlo,monospace;padding:10px 12px;border-radius:8px;max-width:min(360px,92vw);pointer-events:none;white-space:pre-wrap";
+    box.style.pointerEvents = "auto"; box.style.cursor = "pointer"; box.style.bottom = "auto"; box.style.top = "calc(env(safe-area-inset-top) + 50%)";
+    var diagOpen = false; box.addEventListener("click", function () { diagOpen = !diagOpen; });
     document.body.appendChild(box);
     setInterval(function () {
+      if (!diagOpen) { box.textContent = "진단"; box.style.padding = "3px 7px"; box.style.opacity = ".55"; return; }
+      box.style.padding = "10px 12px"; box.style.opacity = "1";
       var D = HSV_DIAG, ago = D.lastRecv ? Math.round((Date.now() - D.lastRecv) / 1000) + "초 전" : "없음";
       var cause = D.lib !== "ok" ? "라이브러리 로드 중/실패" : D.socket === "error" ? "프로젝트 연결 실패" : D.channel !== "SUBSCRIBED" ? "채널 구독 대기/실패 (" + D.channel + ")" : D.trackFail ? "Presence 등록 실패" : (D.presence > 1 && !D.recv) ? "상대방 데이터 수신 실패" : "정상";
       box.textContent = "HSV 진단 · build " + D.build + "\n프로젝트 " + D.project + " · 소켓 " + D.socket + "\n채널 " + D.channel + " · 방 " + D.room + "\n내 ID " + D.myId + "\nPresence 실제 " + D.presence + "명 / 정원 " + D.cap + "\n송신 " + D.sent + " · 수신 " + D.recv + " · 마지막 수신 " + ago + "\nPresence 등록 " + D.tracks + " (실패 " + D.trackFail + ") · 지연 " + (D.latency < 0 ? "-" : D.latency + "ms") + "\n재접속 " + D.reconnects + "회\n판정: " + cause + (D.errors.length ? "\n오류:\n · " + D.errors.slice(0, 4).join("\n · ") : "");
