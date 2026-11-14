@@ -2036,7 +2036,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1114-1933", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1114-1936", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -2405,7 +2405,7 @@ window.addEventListener("error", function (e) {
   // automatic quality: drop resolution and shadows on slow devices
   var qAcc = 0, qN = 0, qDone = false;
   tickers.push(function (dt) {
-    if (qDone || !started) return; qAcc += dt; qN++;
+    if (qDone || !started || GFX.level >= 2) return; qAcc += dt; qN++;
     if (qN >= 150) { if (qAcc / qN > 0.042) { qDone = true; renderer.setPixelRatio(1); sun.castShadow = false; toast("그래픽 자동 조정", "부드럽게 움직이도록 화질을 조금 낮췄어요."); } qAcc = 0; qN = 0; }
   });
 
@@ -3941,15 +3941,20 @@ window.addEventListener("error", function (e) {
   });
 
   // ---- graphics presets (low / mid / high), field of view
-  var GFX = { level: coarse ? 1 : 2 };
-  try { var gl0 = localStorage.getItem("hsv_gfx"); if (gl0) { var gp = JSON.parse(gl0); GFX.level = gp.level; CAMS.fov = gp.fov || 55; } } catch (e) { /* storage unavailable */ }
+  var GFX = { level: 3 }; // default: best quality on every device (user request); the menu can step it down
+  try { var gl0 = localStorage.getItem("hsv_gfx"); if (gl0) { var gp = JSON.parse(gl0); GFX.level = gp.level; CAMS.fov = gp.fov || 55; } if (localStorage.getItem("hsv_gfx_v3") !== "1") { GFX.level = 3; localStorage.setItem("hsv_gfx_v3", "1"); } } catch (e) { /* storage unavailable */ }
   function applyGfx() {
     var dpr = window.devicePixelRatio || 1;
-    renderer.setPixelRatio(GFX.level === 0 ? 1 : GFX.level === 1 ? Math.min(dpr, 1.5) : Math.min(dpr, 2));
-    var want = GFX.level === 0 ? 0 : GFX.level === 1 ? 1024 : 2048;
-    sun.castShadow = want > 0;
+    renderer.setPixelRatio(GFX.level === 0 ? 1 : GFX.level === 1 ? Math.min(dpr, 1.5) : GFX.level === 2 ? Math.min(dpr, 2) : Math.min(dpr, 3));
+    var big = (renderer.capabilities.maxTextureSize || 4096) >= 8192 ? 4096 : 2048;
+    var want = GFX.level === 0 ? 0 : GFX.level === 1 ? 1024 : GFX.level === 2 ? 2048 : big;
+    sun.castShadow = want > 0; sun.shadow.radius = GFX.level === 3 ? 3 : 1;
+    renderer.shadowMap.type = GFX.level === 3 ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
+    scene.fog.far = GFX.level === 3 ? 420 : GFX.level === 2 ? 330 : 260; camera.far = GFX.level === 3 ? 1000 : 900; camera.updateProjectionMatrix();
+    renderer.toneMappingExposure = GFX.level === 3 ? 1.06 : 1.0;
     if (want && sun.shadow.mapSize.x !== want) { sun.shadow.mapSize.set(want, want); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
     fxLevel = GFX.level === 0 ? 0 : GFX.level === 1 ? 1 : 2;
+    scene.traverse(function (o) { if (o.isMesh && o.material && o.material.map && o.material.map.anisotropy !== undefined) { var a = GFX.level === 3 ? Math.min(16, renderer.capabilities.getMaxAnisotropy()) : MAXANISO; if (o.material.map.anisotropy !== a) { o.material.map.anisotropy = a; o.material.map.needsUpdate = true; } } });
     try { localStorage.setItem("hsv_gfx", JSON.stringify({ level: GFX.level, fov: CAMS.fov })); } catch (e) { /* storage unavailable */ }
   }
   applyGfx();
@@ -3959,13 +3964,13 @@ window.addEventListener("error", function (e) {
   tickers.push(function (dt) {
     if (!AUTOQ.on || !started || document.hidden) return; AUTOQ.acc += dt || 0.016; AUTOQ.n++;
     if (AUTOQ.acc < 2) return; var fps = AUTOQ.n / AUTOQ.acc; AUTOQ.acc = 0; AUTOQ.n = 0;
-    AUTOQ.low = fps < 24 ? AUTOQ.low + 1 : 0;
-    if (AUTOQ.low >= 3 && GFX.level > 0) { GFX.level--; applyGfx(); AUTOQ.low = 0; toast("화질을 자동으로 낮췄어요", "평균 " + Math.round(fps) + "fps라서 '" + ["절약", "보통", "고화질"][GFX.level] + "'으로 바꿨어요. 메뉴 → 그래픽에서 바꿀 수 있어요."); }
+    AUTOQ.low = fps < (GFX.level === 3 ? 18 : 24) ? AUTOQ.low + 1 : 0; // at '최고' only a really slow device (<18fps) steps down
+    if (AUTOQ.low >= 3 && GFX.level > 0) { GFX.level--; applyGfx(); AUTOQ.low = 0; toast("화질을 자동으로 낮췄어요", "평균 " + Math.round(fps) + "fps라서 '" + ["절약", "보통", "고화질", "최고"][GFX.level] + "'으로 바꿨어요. 메뉴 → 그래픽에서 바꿀 수 있어요."); }
   });
   EXTRA_PANELS.gfx = function (add, rows) {
     head("Graphics", "그래픽 설정", "휴대폰이 뜨겁거나 끊기면 '절약'을, 컴퓨터에서는 '고화질'을 고르세요. 이 기기에만 저장돼요.");
     pEl("p", "tl-title", "화질");
-    [[0, "절약 (그림자 끔)"], [1, "보통 (휴대폰 권장)"], [2, "고화질"]].forEach(function (o) { var b = bigBtn(o[1], function () { GFX.level = o[0]; applyGfx(); reopen("gfx"); }); if (GFX.level === o[0]) b.classList.add("on"); });
+    [[0, "절약 (그림자 끔)"], [1, "보통"], [2, "고화질"], [3, "최고 (선명한 해상도 · 고해상도 그림자)"]].forEach(function (o) { var b = bigBtn(o[1], function () { GFX.level = o[0]; applyGfx(); reopen("gfx"); }); if (GFX.level === o[0]) b.classList.add("on"); });
     var ab = bigBtn(AUTOQ.on ? "자동 화질 조절: 켜짐 (느려지면 자동으로 낮춤)" : "자동 화질 조절: 꺼짐", function () { AUTOQ.on = !AUTOQ.on; try { localStorage.setItem("hsv_autoq", AUTOQ.on ? "1" : "0"); } catch (e) { /* storage unavailable */ } reopen("gfx"); }); if (AUTOQ.on) ab.classList.add("on");
     pEl("p", "tl-title", "시야각");
     [[50, "좁게"], [55, "기본"], [65, "넓게"], [75, "아주 넓게"]].forEach(function (o) { var b = bigBtn(o[1] + " (" + o[0] + "°)", function () { CAMS.fov = o[0]; applyGfx(); reopen("gfx"); }); if (CAMS.fov === o[0]) b.classList.add("on"); });
