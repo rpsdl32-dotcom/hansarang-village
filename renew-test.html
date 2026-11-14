@@ -2090,7 +2090,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1114-2117", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1114-2120", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -2987,7 +2987,7 @@ window.addEventListener("error", function (e) {
   function netLabel2() { var pill = document.getElementById("net-pill"); if (!pill) return; pill.textContent = NET.state === "on" ? "실제 접속 " + (peerCount() + 1) + "명" + (window.HSV_DIAG ? " / 정원 " + HSV_DIAG.cap + "명" : "") : NET.state === "off" ? "혼자" : "연결 중"; pill.classList.toggle("on", NET.state === "on"); var c2 = document.getElementById("btn-chat2"); if (c2) c2.textContent = chatBtn.textContent; }
   // operator-only network diagnostics: open the site with ?diag=hansarang (never shown to normal visitors)
   (function diagPanel() {
-    if (!/[?&]diag=hansarang\b/.test(location.search) || !window.HSV_DIAG) return;
+    if (!/[?&]diagpanel=1\b/.test(location.search) || !window.HSV_DIAG) return;
     var box = document.createElement("div");
     box.style.cssText = "position:fixed;left:8px;bottom:8px;z-index:9999;background:rgba(10,14,28,.88);color:#e8f0ff;font:12px/1.45 ui-monospace,Menlo,monospace;padding:10px 12px;border-radius:8px;max-width:min(360px,92vw);pointer-events:none;white-space:pre-wrap";
     box.style.pointerEvents = "auto"; box.style.cursor = "pointer"; box.style.bottom = "auto"; box.style.top = "calc(env(safe-area-inset-top) + 50%)";
