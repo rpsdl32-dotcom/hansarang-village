@@ -1761,7 +1761,7 @@ window.addEventListener("error", function (e) {
   function carGeo() {
     if (CARGEO) return CARGEO;
     function prof(pts) { var sh = new THREE.Shape(); sh.moveTo(pts[0][0], pts[0][1]); for (var i = 1; i < pts.length; i++) sh.lineTo(pts[i][0], pts[i][1]); sh.closePath(); return sh; }
-    function ext(sh, w, bev) { var g = new THREE.ExtrudeGeometry(sh, { depth: w, bevelEnabled: true, bevelThickness: bev, bevelSize: bev, bevelSegments: 3, curveSegments: 6 }); g.translate(0, 0, -w / 2); g.rotateY(Math.PI / 2); g.computeVertexNormals(); return g; }
+    function ext(sh, w, bev) { var g = new THREE.ExtrudeGeometry(sh, { depth: w, bevelEnabled: true, bevelThickness: bev, bevelSize: bev, bevelSegments: 3, curveSegments: 6 }); g.translate(0, 0, -w / 2); g.rotateY(-Math.PI / 2); g.computeVertexNormals(); return g; }
     // profile in (length z, height y); front of the car is +z
     var bodyS = new THREE.Shape(); bodyS.moveTo(-2.18, 0.34); bodyS.lineTo(-2.2, 0.72); bodyS.quadraticCurveTo(-2.18, 0.92, -1.95, 0.95); bodyS.lineTo(1.55, 0.92); bodyS.quadraticCurveTo(2.15, 0.86, 2.2, 0.62); bodyS.lineTo(2.18, 0.34);
     bodyS.lineTo(1.72, 0.34); bodyS.absarc(1.38, 0.34, 0.4, 0, Math.PI, false); bodyS.lineTo(-1.04, 0.34); bodyS.absarc(-1.38, 0.34, 0.4, 0, Math.PI, false); bodyS.closePath();
@@ -2107,7 +2107,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1114-2147", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1114-2148", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
