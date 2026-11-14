@@ -5813,7 +5813,7 @@ window.addEventListener("error", function (e) {
     ZONES.forEach(function (z) { if (z.id === "cafe") { z.x0 = CI.x0; z.x1 = CI.x1; z.z0 = CI.z0; z.z1 = CI.z1; } });
     // Blender cafe roof (caferoof.glb): corrugated dark tiles, ridge cap, white fascia + soffits; built at the final (scaled) size
     if (THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load("caferoof.glb?v=1", function (gl) {
-      var top = C2.y0 + C2.h, cx = (C2.x0 + C2.x1) / 2, cz = (C2.z0 + C2.z1 + 0.5) / 2;
+      var top = C2.y0 + C2.h, cx = (C2.x0 + C2.x1) / 2, cz = (C2.z0 + C2.z1) / 2;
       gl.scene.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
       gl.scene.position.set(cx, top, cz); scene.add(gl.scene);
       CAFE_ROOF.forEach(function (m) { m.visible = false; });
