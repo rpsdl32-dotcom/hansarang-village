@@ -2083,7 +2083,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1114-2056", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1114-2103", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -2464,6 +2464,7 @@ window.addEventListener("error", function (e) {
     var fin = PK.n >= 5; document.getElementById("pk-shots").hidden = fin; document.getElementById("pk-again").hidden = !fin;
   }
   function startPK() {
+    if (typeof FPK !== "undefined") { FPK.open(); return; } // first-person penalty (new); the old 3-button version stays below as fallback
     PK.n = 0; PK.goals = 0; PK.busy = false; player.x = -2.4; player.z = 75; player.face = Math.PI / 2; resetBall();
     setMode("pk", { eye: new THREE.Vector3(-8.6, Y0 + 2.7, 75), target: new THREE.Vector3(7.6, Y0 + 1.0, 75) }); renderPK("어디로 찰까요?");
   }
@@ -2486,6 +2487,232 @@ window.addEventListener("error", function (e) {
       setTimeout(function () { resetBall(); PK.busy = false; }, 900);
     }
   });
+  /* ============================================================
+     OLSC FIRST-PERSON PENALTY SHOOT-OUT (kicker / keeper / match)
+     Real ball flight: gravity, drag, curve (Magnus), bounce, posts,
+     crossbar, net and keeper hands. The result depends on aim, power
+     and timing — nothing is decided by a hidden coin flip.
+     ============================================================ */
+  var FPK = (function () {
+    var GX = 7.7, GZ = 75, HALF = 2.5, BAR = 2.2, R = 0.18, SPOT = -1.2, G = 9.81;
+    var S = { on: false, kind: "", phase: "", t: 0, aimY: 1.0, aimZ: 0, curve: 0, power: 0, charging: false, chargeT: 0,
+      vel: new THREE.Vector3(), spin: 0, inNet: false, resolved: false, result: "", round: 0, me: [], ai: [], turn: "kick",
+      kp: { z: 0, y: 1.0, tz: 0, ty: 1.0, dive: 0, react: 0, fly: 0 }, saved: false, back: null, netK: 0, best: 0, shake: 0 };
+    try { S.best = +localStorage.getItem("hsv_fpk_best") || 0; } catch (e) { /* ignore */ }
+    var kicker = placePerson({ shirt: 0x1f4fd8, pants: 0xffffff, hair: 0x2a1a10 }, -40, -40, Math.PI / 2); kicker.visible = false;
+    // 3D goal net (back, sides, roof) that ripples when the ball hits it
+    var netTex = canvasTex(128, 128, function (g, w, h) { g.clearRect(0, 0, w, h); g.strokeStyle = "rgba(255,255,255,.85)"; g.lineWidth = 2; for (var i = 0; i <= w; i += 16) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i, h); g.stroke(); g.beginPath(); g.moveTo(0, i); g.lineTo(w, i); g.stroke(); } });
+    netTex.wrapS = netTex.wrapT = THREE.RepeatWrapping; netTex.repeat.set(10, 5);
+    var netM = new THREE.MeshBasicMaterial({ map: netTex, transparent: true, side: THREE.DoubleSide, depthWrite: false });
+    var net = new THREE.Group(); net.position.set(GX, Y0, GZ); scene.add(net);
+    var back = new THREE.Mesh(new THREE.PlaneGeometry(HALF * 2, BAR, 12, 6), netM); back.rotation.y = Math.PI / 2; back.position.set(1.1, BAR / 2, 0); net.add(back);
+    [-1, 1].forEach(function (s) { var sd = new THREE.Mesh(new THREE.PlaneGeometry(1.1, BAR), netM); sd.position.set(0.55, BAR / 2, s * HALF); net.add(sd); });
+    var roof = new THREE.Mesh(new THREE.PlaneGeometry(1.1, HALF * 2), netM); roof.rotation.x = -Math.PI / 2; roof.position.set(0.55, BAR, 0); net.add(roof);
+    var backPos = back.geometry.attributes.position, backBase = backPos.array.slice();
+    // UI
+    var ui = document.createElement("div"); ui.id = "fpk"; ui.hidden = true;
+    ui.innerHTML = '<div class="fp-top"><span id="fp-score"></span><button type="button" id="fp-exit">나가기</button></div>' +
+      '<div id="fp-msg"></div><div id="fp-ret"></div>' +
+      '<div class="fp-bot" id="fp-kick"><div class="fp-curve"><button type="button" data-c="-1">↶ 감아차기</button><button type="button" data-c="0">직선</button><button type="button" data-c="1">감아차기 ↷</button></div>' +
+      '<div class="fp-gauge"><i id="fp-pow"></i></div><button type="button" class="fp-shoot" id="fp-shoot">꾹 눌러 힘 모으기 · 떼면 슛</button><div class="fp-hint">화면을 드래그해서 조준 · PC: 마우스 드래그 / 방향키 · Space</div></div>' +
+      '<div class="fp-bot" id="fp-keep" hidden><div class="fp-grid"><button data-k="-1,1">↖</button><button data-k="0,1">↑</button><button data-k="1,1">↗</button><button data-k="-1,0">↙</button><button data-k="0,0">●</button><button data-k="1,0">↘</button></div><div class="fp-hint">키커가 차는 순간에 맞춰 방향을 누르세요 · PC: Q W E / A S D</div></div>' +
+      '<div id="fp-menu"><h3>OLSC 승부차기</h3><p>1인칭으로 직접 차고, 직접 막아요.</p><button type="button" data-m="kick">키커 플레이 (5번 슛)</button><button type="button" data-m="keep">골키퍼 플레이 (5번 방어)</button><button type="button" data-m="match">승부차기 대결 (키커·골키퍼 교대, 서든데스)</button><p class="fp-note">친구와 1대1 · 관전은 실시간 동기화를 검증한 뒤에 열어요.</p><button type="button" data-m="close" class="ghost">닫기</button></div>' +
+      '<div id="fp-end" hidden><h3 id="fp-endt"></h3><p id="fp-ends"></p><button type="button" id="fp-again">다시 하기</button><button type="button" id="fp-back" class="ghost">마을로 돌아가기</button></div>';
+    document.body.appendChild(ui);
+    var css = document.createElement("style"); css.textContent =
+      "#fpk{position:fixed;inset:0;z-index:7;pointer-events:none;font-family:var(--font-ui,sans-serif);color:#fff}#fpk[hidden]{display:none}" +
+      "#fpk button{pointer-events:auto;font:700 15px var(--font-ui,sans-serif);border-radius:12px;border:1px solid rgba(255,255,255,.45);background:rgba(10,16,32,.62);color:#fff;padding:12px 14px;cursor:pointer;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}" +
+      ".fp-top{position:absolute;top:calc(10px + env(safe-area-inset-top));left:10px;right:10px;display:flex;justify-content:space-between;align-items:center}#fp-score{background:rgba(10,16,32,.7);padding:8px 14px;border-radius:999px;font:700 15px var(--font-ui,sans-serif)}" +
+      "#fp-msg{position:absolute;top:18%;left:0;right:0;text-align:center;font:800 clamp(26px,7vw,54px) var(--font-display,serif);text-shadow:0 4px 18px rgba(0,0,0,.6);opacity:0;transition:opacity .25s}" +
+      "#fp-ret{position:absolute;width:34px;height:34px;margin:-17px 0 0 -17px;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 2px rgba(0,0,0,.35),inset 0 0 0 2px rgba(0,0,0,.25)}#fp-ret:after{content:'';position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px;background:#ff5a5a;border-radius:50%}" +
+      ".fp-bot{position:absolute;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:8px;padding:0 12px}" +
+      ".fp-curve{display:flex;gap:6px}.fp-curve button.on{background:#ffd23f;color:#14203d}.fp-gauge{width:min(320px,80vw);height:14px;border-radius:7px;background:rgba(0,0,0,.45);overflow:hidden;border:1px solid rgba(255,255,255,.5)}#fp-pow{display:block;height:100%;width:0;background:linear-gradient(90deg,#4ade80,#facc15 70%,#ef4444)}" +
+      ".fp-shoot{width:min(340px,86vw);padding:18px!important;font-size:17px!important;background:#ffffff!important;color:#14203d!important}.fp-hint{font-size:12px;opacity:.85;text-shadow:0 1px 4px #000;text-align:center}" +
+      ".fp-grid{display:grid;grid-template-columns:repeat(3,72px);gap:8px}.fp-grid button{height:60px;font-size:24px!important}" +
+      "#fp-menu,#fp-end{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(380px,90vw);background:rgba(10,16,32,.86);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:10px;pointer-events:auto;text-align:center}#fp-menu[hidden],#fp-end[hidden]{display:none}#fp-menu h3,#fp-end h3{margin:0;font:800 24px var(--font-display,serif)}#fp-menu p,#fp-end p{margin:0;opacity:.85;font-size:14px}.fp-note{font-size:12px!important;opacity:.6!important}#fpk button.ghost{background:transparent}";
+    document.head.appendChild(css);
+    var $u = function (id) { return document.getElementById(id); };
+    function flash(t, ms) { var m = $u("fp-msg"); m.textContent = t; m.style.opacity = "1"; clearTimeout(flash.h); flash.h = setTimeout(function () { m.style.opacity = "0"; }, ms || 1400); }
+    function scoreText() {
+      if (S.kind === "kick") return "슛 " + S.me.length + "/5 · 골 " + S.me.filter(Boolean).length + (S.best ? " · 최고 " + S.best : "");
+      if (S.kind === "keep") return "방어 " + S.ai.length + "/5 · 선방 " + S.ai.filter(function (g) { return !g; }).length;
+      var m = S.me.filter(Boolean).length, a = S.ai.filter(Boolean).length; return "나 " + m + " : " + a + " 상대 · " + (Math.max(S.me.length, S.ai.length) > 5 ? "서든데스" : (S.round + 1) + "라운드");
+    }
+    function setScore() { $u("fp-score").textContent = scoreText(); }
+
+    function open() {
+      if (mode) return;
+      S.back = { x: player.x, z: player.z, y: player.y, face: player.face };
+      setMode("fpk", { eye: new THREE.Vector3(SPOT - 2, Y0 + 1.6, GZ), target: new THREE.Vector3(GX, Y0 + 1, GZ) });
+      ui.hidden = false; $u("fp-menu").hidden = false; $u("fp-end").hidden = true; $u("fp-kick").hidden = true; $u("fp-keep").hidden = true; $u("fp-ret").style.display = "none";
+      S.on = true; S.phase = "menu"; $u("fp-score").textContent = "모드를 고르세요";
+    }
+    function close() {
+      S.on = false; ui.hidden = true; kicker.visible = false; resetBall(); keeper.rotation.z = 0; keeper.position.y = groundH(7, 75);
+      exitMode(); if (S.back) { player.x = S.back.x; player.z = S.back.z; player.face = S.back.face; }
+    }
+    function start(kind) {
+      S.kind = kind; S.me = []; S.ai = []; S.round = 0; $u("fp-menu").hidden = true; $u("fp-end").hidden = true;
+      S.turn = kind === "keep" ? "keep" : "kick"; setupTurn();
+    }
+    function setupTurn() {
+      setScore(); S.resolved = false; S.inNet = false; S.saved = false; S.t = 0; S.power = 0; S.charging = false; S.spin = 0; S.netK = 0;
+      ball.position.set(SPOT, Y0 + R, GZ); S.vel.set(0, 0, 0);
+      S.kp.z = 0; S.kp.y = 1.0; S.kp.tz = 0; S.kp.ty = 1.0; S.kp.dive = 0; S.kp.fly = 0; keeper.rotation.set(0, -Math.PI / 2, 0);
+      if (S.turn === "kick") {
+        S.phase = "aim"; S.aimY = 1.0; S.aimZ = 0; kicker.visible = false; keeper.visible = true;
+        $u("fp-kick").hidden = false; $u("fp-keep").hidden = true; $u("fp-ret").style.display = ""; $u("fp-pow").style.width = "0";
+        // AI keeper: reads the shot after a short delay, quality varies per shot
+        S.kp.react = 0.16 + Math.random() * 0.14; S.kp.skill = 0.55 + Math.random() * 0.35;
+        flash("조준하고 슛!", 1200);
+      } else {
+        S.phase = "runup"; kicker.visible = true; kicker.position.set(SPOT - 3.2, groundH(SPOT, GZ), GZ - 1.2); kicker.rotation.y = Math.PI / 2;
+        $u("fp-kick").hidden = true; $u("fp-keep").hidden = false; $u("fp-ret").style.display = "none";
+        // AI kicker picks a real target in the goal (sometimes misses), power and curve
+        var cz = (Math.random() < 0.5 ? -1 : 1) * (0.6 + Math.random() * 1.75), cy = 0.25 + Math.random() * 1.75;
+        if (Math.random() < 0.18) cz *= 0.3; S.aiShot = { z: cz, y: cy, power: 0.55 + Math.random() * 0.4, curve: (Math.random() - 0.5) * 1.2 };
+        flash("막아라!", 1000);
+      }
+    }
+    // --- aiming input (drag / mouse / keys)
+    var drag = null;
+    canvas.addEventListener("pointerdown", function (e) { if (!S.on || S.phase !== "aim") return; drag = { x: e.clientX, y: e.clientY, z0: S.aimZ, y0: S.aimY }; }, true);
+    window.addEventListener("pointermove", function (e) { if (!drag) return; var k = 6 / Math.max(320, Math.min(innerWidth, innerHeight)); S.aimZ = clamp(drag.z0 + (e.clientX - drag.x) * k, -3.6, 3.6); S.aimY = clamp(drag.y0 - (e.clientY - drag.y) * k, 0.1, 3.2); }, true);
+    window.addEventListener("pointerup", function () { drag = null; }, true);
+    window.addEventListener("keydown", function (e) {
+      if (!S.on) return; var k = e.key.toLowerCase();
+      if (S.phase === "aim") { if (k === "arrowleft") S.aimZ = clamp(S.aimZ - 0.15, -3.6, 3.6); if (k === "arrowright") S.aimZ = clamp(S.aimZ + 0.15, -3.6, 3.6); if (k === "arrowup") S.aimY = clamp(S.aimY + 0.12, 0.1, 3.2); if (k === "arrowdown") S.aimY = clamp(S.aimY - 0.12, 0.1, 3.2); if (k === " " && !S.charging) { S.charging = true; S.chargeT = 0; e.preventDefault(); } }
+      var map = { q: [-1, 1], w: [0, 1], e: [1, 1], a: [-1, 0], s: [0, 0], d: [1, 0] }; if (S.turn === "keep" && map[k]) dive(map[k][0], map[k][1]);
+    }, true);
+    window.addEventListener("keyup", function (e) { if (S.on && e.key === " " && S.charging) release(); }, true);
+    var shootB = $u("fp-shoot");
+    shootB.addEventListener("pointerdown", function (e) { e.stopPropagation(); if (S.phase === "aim") { S.charging = true; S.chargeT = 0; } });
+    shootB.addEventListener("pointerup", function (e) { e.stopPropagation(); if (S.charging) release(); });
+    shootB.addEventListener("pointerleave", function () { if (S.charging) release(); });
+    ui.querySelectorAll("[data-c]").forEach(function (b) { b.addEventListener("click", function () { S.curve = +b.dataset.c; ui.querySelectorAll("[data-c]").forEach(function (x) { x.classList.toggle("on", x === b); }); }); });
+    ui.querySelectorAll("[data-k]").forEach(function (b) { b.addEventListener("pointerdown", function (e) { e.stopPropagation(); var v = b.dataset.k.split(","); dive(+v[0], +v[1]); }); });
+    ui.querySelectorAll("[data-m]").forEach(function (b) { b.addEventListener("click", function () { if (b.dataset.m === "close") close(); else start(b.dataset.m); }); });
+    $u("fp-exit").addEventListener("click", close); $u("fp-back").addEventListener("click", close); $u("fp-again").addEventListener("click", function () { start(S.kind); });
+
+    function release() {
+      S.charging = false; if (S.phase !== "aim") return;
+      S.power = Math.max(0.15, S.power); S.phase = "runup"; S.t = 0; $u("fp-ret").style.display = "none";
+    }
+    function launch(aimZ, aimY, power, curve) {
+      // speed from power; overhit adds error (it can sail over the bar)
+      var speed = 13 + power * 15, err = Math.max(0, power - 0.82) * 4.5 + 0.12;
+      aimZ += (Math.random() - 0.5) * err; aimY += (Math.random() - 0.3) * err;
+      var p0 = ball.position, dx = GX - p0.x, t = dx / speed, lat = curve * 7.5;
+      var tz = GZ + aimZ - 0.5 * lat * t * t;               // pre-compensate the curve so the ball bends INTO the aim
+      S.vel.set(speed, (Y0 + aimY - p0.y) / t + 0.5 * G * t, (tz - p0.z) / t); S.spin = lat; S.phase = "flight"; S.t = 0;
+      SFX.play("land");
+    }
+    function dive(dz, dy) {
+      if (!S.on || S.turn !== "keep" || S.kp.dive) return;
+      S.kp.dive = 1; S.kp.tz = dz * 2.0; S.kp.ty = dy ? 1.85 : 0.45; if (!dz) S.kp.ty = dy ? 2.0 : 1.0;
+    }
+    function finishShot(goal, why) {
+      if (S.resolved) return; S.resolved = true;
+      if (S.turn === "kick") S.me.push(goal); else S.ai.push(goal);
+      var mine = S.turn === "kick";
+      flash(goal ? (mine ? "골!!" : "실점") : why === "save" ? (mine ? "막혔다!" : "선방!!") : why === "post" ? "골대!" : "빗나감", 1500);
+      if ((goal && mine) || (!goal && !mine)) { SFX.play("goal"); if (typeof STAD !== "undefined") STAD.cheer = 2.5; } else SFX.play("fail");
+      setScore(); setTimeout(nextTurn, 1700);
+    }
+    function nextTurn() {
+      if (!S.on) return;
+      var mg = S.me.filter(Boolean).length, ag = S.ai.filter(Boolean).length, n = Math.max(S.me.length, S.ai.length);
+      if (S.kind === "kick" && S.me.length >= 5) return end("슛 결과 " + mg + " / 5", mg >= 3 ? "멋진 슈팅이에요!" : "다시 도전해 보세요");
+      if (S.kind === "keep" && S.ai.length >= 5) { var sv = S.ai.filter(function (g) { return !g; }).length; return end("선방 " + sv + " / 5", sv >= 2 ? "철벽 골키퍼!" : "타이밍을 노려 보세요"); }
+      if (S.kind === "match") {
+        if (S.me.length === S.ai.length) {
+          S.round = S.me.length;
+          var left = Math.max(0, 5 - S.me.length);
+          if (S.me.length >= 5 && mg !== ag) return end(mg > ag ? "승리!" : "패배", mg + " : " + ag + (S.me.length > 5 ? " (서든데스)" : ""));
+          if (S.me.length < 5 && (mg > ag + left || ag > mg + left)) return end(mg > ag ? "승리!" : "패배", mg + " : " + ag + " · 조기 확정");
+        }
+        S.turn = S.turn === "kick" ? "keep" : "kick";
+      }
+      setupTurn();
+    }
+    function end(title, sub) {
+      S.phase = "end"; $u("fp-kick").hidden = true; $u("fp-keep").hidden = true; kicker.visible = false;
+      var goals = S.me.filter(Boolean).length, saves = S.ai.filter(function (g) { return !g; }).length, pts = goals * 10 + saves * 10;
+      if (pts) gain(Math.round(pts / 2), pts); if (goals >= 3) mission("pk");
+      if (goals > S.best) { S.best = goals; try { localStorage.setItem("hsv_fpk_best", String(goals)); } catch (e) { /* ignore */ } }
+      $u("fp-endt").textContent = title; $u("fp-ends").textContent = sub + " · 득점 " + goals + " · 선방 " + saves + (pts ? " · +" + pts + "P" : ""); $u("fp-end").hidden = false;
+    }
+    var vA = new THREE.Vector3(), vB = new THREE.Vector3();
+    tickers.push(function (dt) {
+      if (S.on && mode !== "fpk") { S.on = false; ui.hidden = true; kicker.visible = false; keeper.visible = true; resetBall(); }
+      if (!S.on) return; dt = Math.min(dt || 0.016, 0.033);
+      var eyeY = Y0 + 1.62;
+      // ---- net ripple
+      if (S.netK > 0) { S.netK = Math.max(0, S.netK - dt * 1.6); for (var i = 0; i < backPos.count; i++) { var bx = backBase[i * 3], by = backBase[i * 3 + 1]; var d = Math.hypot(bx - S.netZ, by - S.netY); backPos.setZ(i, Math.sin(d * 4 - (1 - S.netK) * 14) * 0.35 * S.netK * Math.max(0, 1 - d / 3)); } backPos.needsUpdate = true; }
+      if (S.phase === "aim") {
+        if (S.charging) { S.chargeT += dt; S.power = 0.5 - 0.5 * Math.cos(S.chargeT * 2.6); $u("fp-pow").style.width = Math.round(S.power * 100) + "%"; }
+        camera.position.set(SPOT - 2.4, eyeY, GZ); camera.lookAt(GX, Y0 + 1.0, GZ + S.aimZ * 0.15);
+        vA.set(GX, Y0 + S.aimY, GZ + S.aimZ).project(camera); var r = $u("fp-ret"); r.style.left = ((vA.x * 0.5 + 0.5) * innerWidth) + "px"; r.style.top = ((-vA.y * 0.5 + 0.5) * innerHeight) + "px";
+      } else if (S.phase === "runup" && S.turn === "kick") {
+        S.t += dt; var k = Math.min(1, S.t / 0.5);
+        camera.position.set(SPOT - 2.4 + k * 1.75, eyeY + Math.abs(Math.sin(k * Math.PI * 3)) * 0.06, GZ - 0.25 * Math.sin(k * Math.PI)); camera.lookAt(GX, Y0 + 0.9 - k * 0.5, GZ + S.aimZ * 0.15);
+        if (k >= 1) { S.shake = 0.18; launch(S.aimZ, S.aimY, S.power, S.curve); }
+      } else if (S.phase === "runup" && S.turn === "keep") {
+        S.t += dt; var k2 = Math.min(1, S.t / 1.1);
+        kicker.position.x = SPOT - 3.2 + k2 * 2.6; kicker.position.z = GZ - 1.2 + k2 * 1.1;
+        if (kicker.userData.legR) kicker.userData.legR.rotation.x = Math.sin(S.t * 14) * 0.7;
+        if (k2 >= 1) { var a = S.aiShot; launch(a.z, a.y, a.power, a.curve); }
+      }
+      if (S.phase === "flight" || S.phase === "after") {
+        S.t += dt;
+        // ball physics: gravity, air drag, curve
+        var v = S.vel, sp = v.length(), drag = 0.012 * sp;
+        v.x -= v.x * drag * dt; v.y -= (G + v.y * drag) * dt; v.z += (S.spin - v.z * drag) * dt; S.spin *= 1 - dt * 0.6;
+        var p = ball.position, px = p.x, pz = p.z, py = p.y;
+        p.addScaledVector(v, dt); ball.rotation.x += sp * dt * 2; ball.rotation.z -= v.z * dt * 3;
+        if (p.y < Y0 + R) { p.y = Y0 + R; v.y = Math.abs(v.y) * 0.45; v.x *= 0.8; v.z *= 0.8; }
+        // keeper hands (AI or player) along the goal line
+        var kz = GZ + S.kp.z, ky = Y0 + S.kp.y;
+        if (!S.resolved && px < 7.25 && p.x >= 7.25) {
+          vB.set(7.25, py + (p.y - py) * ((7.25 - px) / (p.x - px)), pz + (p.z - pz) * ((7.25 - px) / (p.x - px)));
+          var reach = S.turn === "kick" ? 0.55 : (S.kp.dive ? 0.62 : 0.45), dz2 = vB.z - kz, dy2 = vB.y - ky;
+          var body = Math.abs(dz2) < 0.3 && vB.y < Y0 + 1.8;
+          if (Math.hypot(dz2, dy2) < reach || body) { S.saved = true; v.x = -Math.abs(v.x) * 0.35; v.z += (dz2 >= 0 ? 1 : -1) * 3; v.y = 2.5; finishShot(false, "save"); }
+        }
+        // posts and crossbar
+        if (!S.resolved && px < GX && p.x >= GX - 0.05) {
+          var cz = p.z - GZ, cy = p.y - Y0, nearPost = Math.abs(Math.abs(cz) - HALF) < R + 0.07 && cy < BAR + 0.07, nearBar = Math.abs(cy - BAR) < R + 0.07 && Math.abs(cz) < HALF + 0.07;
+          if (nearPost || nearBar) { v.x = -Math.abs(v.x) * 0.55; if (nearBar) v.y = -Math.abs(v.y) * 0.4 - 1; else v.z = -v.z * 0.5 - (cz > 0 ? 1.5 : -1.5); finishShot(false, "post"); }
+          else if (Math.abs(cz) < HALF - R && cy < BAR - R) { S.inNet = true; finishShot(true, "goal"); }
+          else { finishShot(false, "miss"); }
+        }
+        if (S.inNet && p.x > GX + 1.0) { p.x = GX + 1.0; v.x = -v.x * 0.15; v.z *= 0.3; S.netK = 1; S.netZ = -(p.z - GZ); S.netY = p.y - Y0 - BAR / 2; }
+        if (S.inNet) { p.z = clamp(p.z, GZ - HALF + R, GZ + HALF - R); p.y = Math.min(p.y, Y0 + BAR - R); }
+        // camera: kicker follows the ball, keeper watches it come
+        if (S.turn === "kick") { vA.set(p.x - 2.6, Math.max(eyeY - 0.2, p.y + 0.7), GZ + (p.z - GZ) * 0.5); camera.position.lerp(vA, 1 - Math.exp(-dt * 5)); camera.lookAt(p); }
+        if (S.t > 3.5 && !S.resolved) finishShot(false, "miss");
+      }
+      if (S.turn === "kick" && (S.phase === "flight" || S.phase === "after")) {
+        // AI keeper reads the flight after its reaction time
+        if (S.t > S.kp.react) { var tt = Math.max(0.05, (7.25 - ball.position.x) / Math.max(1, S.vel.x)); var predZ = ball.position.z + S.vel.z * tt - GZ, predY = ball.position.y + S.vel.y * tt - 0.5 * G * tt * tt - Y0; S.kp.tz = clamp(predZ * S.kp.skill, -2.1, 2.1); S.kp.ty = clamp(predY, 0.3, 2.0); S.kp.dive = 1; }
+      }
+      if (S.turn === "keep" || S.turn === "kick") {
+        // keeper body moves toward its dive target (max lateral speed ~6 m/s)
+        var spd = S.kp.dive ? 6.2 : 2; S.kp.z += clamp(S.kp.tz - S.kp.z, -spd * dt, spd * dt); S.kp.y += clamp(S.kp.ty - S.kp.y, -4 * dt, 4 * dt);
+        keeper.position.set(7.0, groundH(7, 75) + Math.max(0, S.kp.y - 1.0) * 0.6, GZ + S.kp.z); keeper.rotation.set(0, -Math.PI / 2, 0); keeper.rotation.x = -S.kp.z * 0.32 * (S.kp.dive ? 1 : 0.2);
+      }
+      if (S.turn === "keep" && S.phase !== "menu" && S.phase !== "end") {
+        // first-person keeper camera rides with the dive
+        keeper.visible = false;
+        var cam = vA.set(GX - 0.25, Y0 + 1.55 + (S.kp.y - 1.0) * 0.6, GZ + S.kp.z * 0.9);
+        camera.position.copy(cam); camera.lookAt(SPOT - 3, Y0 + 0.9, GZ + S.kp.z * 0.3); camera.rotateZ(-S.kp.z * 0.12);
+      } else if (S.phase !== "menu") keeper.visible = true;
+      if (S.shake > 0) { S.shake -= dt; camera.position.y += (Math.random() - 0.5) * S.shake * 0.25; }
+      if (S.phase === "menu") { camera.position.set(SPOT - 3, Y0 + 2.4, GZ + 3); camera.lookAt(GX, Y0 + 1, GZ); }
+    });
+    return { open: open, close: close, state: S };
+  })();
+  if (/[?&]diag=hansarang\b/.test(location.search)) window.__fpk = FPK;
   var pose = 0;
   function startPhoto() {
     player.x = -6; player.z = 61.4; player.face = Math.PI; pose = 0;
