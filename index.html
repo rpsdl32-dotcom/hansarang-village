@@ -51,7 +51,7 @@ body {
   position: fixed; inset: 0; pointer-events: none; z-index: 2;
 }
 #hud > * { pointer-events: auto; }
-.glass { background: var(--glass); color: var(--paper); border: 1px solid var(--glass-line); border-radius: 10px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.glass { background: linear-gradient(180deg, rgba(30,40,66,.78), rgba(14,20,38,.78)); color: var(--paper); border: 1px solid rgba(255,255,255,.16); border-radius: 14px; backdrop-filter: blur(14px) saturate(1.3); -webkit-backdrop-filter: blur(14px) saturate(1.3); box-shadow: 0 8px 24px rgba(0,0,0,.28); }
 #stamps { position: absolute; top: var(--pt); left: var(--pl); padding: 8px 10px 10px; min-width: 150px; }
 #stamps .head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 11px; letter-spacing: 0.08em; opacity: 0.85; }
 #stamps .head b { font-variant-numeric: tabular-nums; font-size: 13px; letter-spacing: 0; }
@@ -74,7 +74,8 @@ body {
 #emotes { gap: 4px; }
 #emotes:not(.open) .btn:not(:first-child) { display: none; }
 #btn-throw.float { position: absolute; right: var(--pr); bottom: calc(var(--pb) + 176px); flex: none; }
-#minimap { width: 176px; height: 104px; display: block; border-radius: 10px; border: 1px solid var(--glass-line); background: #22303a; }
+#minimap { width: 150px; height: 150px; display: block; border-radius: 50%; border: 3px solid rgba(255,255,255,.9); box-shadow: 0 6px 18px rgba(0,0,0,.35), inset 0 0 0 1px rgba(0,0,0,.25); background: #22303a; cursor: pointer; align-self: flex-end; }
+#fullmap{position:fixed;inset:0;z-index:60;display:none;background:rgba(8,14,28,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center}#fullmap.open{display:flex}#fullmap .fm-box{position:relative;width:min(92vw,880px);height:min(80vh,620px);border-radius:18px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.25)}#fullmap canvas{width:100%;height:100%;display:block;touch-action:none}#fullmap .fm-head{position:absolute;left:14px;top:12px;color:#fff;font:800 20px var(--font-display,serif);text-shadow:0 2px 8px #000}#fullmap .fm-head small{display:block;font:500 12px var(--font-ui,sans-serif);opacity:.8}#fullmap button{position:absolute;right:12px;top:12px;font:700 14px var(--font-ui,sans-serif);border-radius:12px;border:1px solid rgba(255,255,255,.5);background:rgba(10,16,32,.7);color:#fff;padding:9px 14px;cursor:pointer}
 .row { display: flex; gap: 6px; }
 .btn {
   appearance: none; font: inherit; cursor: pointer; border: 1px solid var(--glass-line); background: var(--glass); color: var(--paper);
@@ -272,7 +273,7 @@ body.touch .kbd-only { display: none; }
   #panel.open { transform: none; }
   #act { left: auto; right: var(--pr); transform: none; bottom: calc(var(--pb) + 40px); }
   #side { width: 150px; }
-  #minimap { width: 150px; height: 90px; }
+  #minimap { width: 118px; height: 118px; }
   #menu { top: calc(var(--pt) + 140px); }
   #chatbox { left: var(--pl); right: auto; bottom: auto; top: calc(var(--pt) + 104px); width: calc(100% - 200px); min-width: 170px; }
   #zone strong { font-size: 24px; }
@@ -306,7 +307,7 @@ body.touch .kbd-only { display: none; }
   #side .btn { white-space: nowrap; font-size: 14px; padding: 7px 11px; min-height: 36px; }
   #side > .row:first-child { flex-wrap: nowrap; gap: 5px; }
   #side .chip, #side [id^=net] { white-space: nowrap; }
-  #minimap { width: 128px; height: 78px; }
+  #minimap { width: 104px; height: 104px; }
   #side { max-width: 58vw; align-items: flex-end; }
   #side > .row:first-child { flex-wrap: wrap; justify-content: flex-end; row-gap: 5px; }
   #net-pill { order: 9; font-size: 11px; padding: 3px 8px; }
@@ -330,7 +331,7 @@ body.touch .kbd-only { display: none; }
 
   <div id="side">
     <div class="row"><button id="btn-menu" class="btn primary" type="button" aria-expanded="false" aria-controls="menu">메뉴</button><button id="btn-chat2" class="btn" type="button">채팅</button><span id="net-pill">혼자</span></div>
-    <canvas id="minimap" width="352" height="208" aria-label="미니맵"></canvas>
+    <canvas id="minimap" width="300" height="300" aria-label="미니맵 (누르면 전체 지도)"></canvas>
     <div class="seg" role="group" aria-label="시간대">
       <button id="t-day" type="button" aria-pressed="true">낮</button>
       <button id="t-dusk" type="button" aria-pressed="false">노을</button>
@@ -2163,7 +2164,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1114-2301", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1114-2306", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -6417,16 +6418,66 @@ window.addEventListener("error", function (e) {
     g.fillStyle = "#222"; g.fillRect(-32, -38.6, 16, 1.2); g.fillRect(-11, -36.6, 18, 1.2);
     g.fillStyle = "#6a5a48"; g.fillRect(-33, 4.4, 45, 0.6);
   })();
+  function spotColor(s) { var n = (s.name || "") + (s.id || ""); return /볼링|축구|OLSC|승부|게임|드리블/.test(n) ? "#3db8ff" : /카페|커피|바비큐|아셀/.test(n) ? "#ffb02e" : /본당|예배|교회|기도/.test(n) ? "#ff6b8a" : "#ff8a3d"; }
   function drawMinimap() {
-    var W2 = mm.width, H2 = mm.height;
+    var W2 = mm.width, H2 = mm.height, R = W2 / 2, rot = cam.yaw, Z = MPX * 1.25;
     mg.setTransform(1, 0, 0, 1, 0, 0); mg.clearRect(0, 0, W2, H2);
-    var sx = (player.x - WORLD.x0) * MPX - W2 / 2, sz = (player.z - WORLD.z0) * MPX - H2 / 2;
-    mg.drawImage(mapC, sx, sz, W2, H2, 0, 0, W2, H2);
-    spots.forEach(function (s) { var x = (s.x - player.x) * MPX + W2 / 2, y = (s.z - player.z) * MPX + H2 / 2; if (x < -10 || y < -10 || x > W2 + 10 || y > H2 + 10) return; mg.beginPath(); mg.arc(x, y, s === nearSpot ? 7 : 5, 0, 6.3); mg.fillStyle = "#ff8a3d"; mg.fill(); mg.lineWidth = 2; mg.strokeStyle = "#fff"; mg.stroke(); });
-    mg.save(); mg.translate(W2 / 2, H2 / 2); mg.rotate(Math.PI - player.face);
-    mg.beginPath(); mg.moveTo(0, -11); mg.lineTo(7.5, 8); mg.lineTo(0, 4); mg.lineTo(-7.5, 8); mg.closePath();
-    mg.fillStyle = "#d6f03c"; mg.fill(); mg.lineWidth = 2; mg.strokeStyle = "#0f1b33"; mg.stroke(); mg.restore();
-    mg.font = '600 18px "IBM Plex Sans KR", sans-serif'; mg.fillStyle = "rgba(255,255,255,0.9)"; mg.textAlign = "left"; mg.fillText("N", 12, 26);
+    mg.save(); mg.beginPath(); mg.arc(R, R, R, 0, 6.3); mg.clip();
+    mg.fillStyle = "#1c2a24"; mg.fillRect(0, 0, W2, H2);
+    // map turns with the camera, so "up" on the minimap is where you are looking
+    mg.translate(R, R); mg.rotate(rot); mg.scale(1.25, 1.25);
+    mg.drawImage(mapC, -(player.x - WORLD.x0) * MPX, -(player.z - WORLD.z0) * MPX);
+    mg.setTransform(1, 0, 0, 1, 0, 0); mg.translate(R, R);
+    var cr = Math.cos(rot), sr = Math.sin(rot);
+    spots.forEach(function (s) { var dx = (s.x - player.x) * Z, dz = (s.z - player.z) * Z, x = dx * cr - dz * sr, y = dx * sr + dz * cr, d = Math.hypot(x, y);
+      if (d > R - 10) { x *= (R - 10) / d; y *= (R - 10) / d; mg.globalAlpha = 0.55; } else mg.globalAlpha = 1;
+      mg.beginPath(); mg.arc(x, y, s === nearSpot ? 9 : 6.5, 0, 6.3); mg.fillStyle = spotColor(s); mg.fill(); mg.lineWidth = 2.5; mg.strokeStyle = "#fff"; mg.stroke(); });
+    mg.globalAlpha = 1;
+    // player arrow (relative to camera heading)
+    mg.save(); mg.rotate(Math.PI - player.face + rot);
+    mg.beginPath(); mg.moveTo(0, -15); mg.lineTo(10, 11); mg.lineTo(0, 5); mg.lineTo(-10, 11); mg.closePath();
+    mg.fillStyle = "#d6f03c"; mg.fill(); mg.lineWidth = 3; mg.strokeStyle = "#0f1b33"; mg.stroke(); mg.restore();
+    mg.restore();
+    // compass ring with a moving N
+    mg.setTransform(1, 0, 0, 1, 0, 0); var nx = R + Math.sin(-rot + Math.PI) * (R - 16), ny = R + Math.cos(-rot + Math.PI) * (R - 16);
+    mg.beginPath(); mg.arc(nx, ny, 14, 0, 6.3); mg.fillStyle = "#e8344a"; mg.fill();
+    mg.font = '800 17px "IBM Plex Sans KR", sans-serif'; mg.fillStyle = "#fff"; mg.textAlign = "center"; mg.textBaseline = "middle"; mg.fillText("N", nx, ny + 1);
+    if (FM.open) drawFullMap();
+  }
+  // full-screen map: tap the minimap or press M
+  var FM = { open: false };
+  (function () {
+    var wrap = document.createElement("div"); wrap.id = "fullmap";
+    wrap.innerHTML = '<div class="fm-box"><canvas id="fm-c"></canvas><div class="fm-head">한사랑 마을 지도<small><b style="color:#ff6b8a">●</b> 교회 · <b style="color:#ffb02e">●</b> 카페 · <b style="color:#3db8ff">●</b> 스포츠/게임 · <b style="color:#ff8a3d">●</b> 기타</small></div><button type="button" id="fm-x">닫기 (M)</button></div>';
+    document.body.appendChild(wrap); FM.el = wrap; FM.c = wrap.querySelector("canvas");
+    function toggle(v) { FM.open = v == null ? !FM.open : v; wrap.classList.toggle("open", FM.open); if (FM.open) drawFullMap(); }
+    FM.toggle = toggle;
+    mm.addEventListener("click", function () { toggle(true); });
+    wrap.querySelector("#fm-x").addEventListener("click", function () { toggle(false); });
+    wrap.addEventListener("click", function (e) { if (e.target === wrap) toggle(false); });
+    window.addEventListener("keydown", function (e) { if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return; if (e.key === "m" || e.key === "M" || e.key === "ㅡ") toggle(); if (e.key === "Escape" && FM.open) toggle(false); });
+  })();
+  function drawFullMap() {
+    var c = FM.c, r = c.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (!r.width) return; if (c.width !== Math.round(r.width * dpr)) { c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr); }
+    var g = c.getContext("2d"), W3 = c.width, H3 = c.height;
+    // fit the view to where the places are (plus the player), not the whole forest
+    var bx0 = player.x, bx1 = player.x, bz0 = player.z, bz1 = player.z;
+    spots.forEach(function (s) { if (s.x < -120 || s.x > 120 || s.z < -120 || s.z > 140) return; bx0 = Math.min(bx0, s.x); bx1 = Math.max(bx1, s.x); bz0 = Math.min(bz0, s.z); bz1 = Math.max(bz1, s.z); });
+    bx0 -= 12; bx1 += 12; bz0 -= 12; bz1 += 12;
+    var k = Math.min(W3 / ((bx1 - bx0) * MPX), H3 / ((bz1 - bz0) * MPX)), ox = W3 / 2 - ((bx0 + bx1) / 2 - WORLD.x0) * MPX * k, oy = H3 / 2 - ((bz0 + bz1) / 2 - WORLD.z0) * MPX * k;
+    g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = "#16241e"; g.fillRect(0, 0, W3, H3); g.imageSmoothingQuality = "high"; g.drawImage(mapC, ox, oy, mapC.width * k, mapC.height * k);
+    function P(x, z) { return [ox + (x - WORLD.x0) * MPX * k, oy + (z - WORLD.z0) * MPX * k]; }
+    var fs = Math.round(12 * dpr); g.font = "700 " + fs + 'px "IBM Plex Sans KR", sans-serif'; g.textAlign = "center"; g.textBaseline = "bottom";
+    var placed = [];
+    spots.forEach(function (s) { var p = P(s.x, s.z); g.beginPath(); g.arc(p[0], p[1], 6 * dpr, 0, 6.3); g.fillStyle = spotColor(s); g.fill(); g.lineWidth = 2 * dpr; g.strokeStyle = "#fff"; g.stroke(); });
+    // labels: skip any that would overlap one already drawn (closest to the player wins)
+    spots.slice().sort(function (a2, b2) { return Math.hypot(a2.x - player.x, a2.z - player.z) - Math.hypot(b2.x - player.x, b2.z - player.z); }).forEach(function (s) {
+      if (!s.name) return; var p = P(s.x, s.z), t = s.name, tw = g.measureText(t).width + 10 * dpr, rx = p[0] - tw / 2, ry = p[1] - 9 * dpr - fs - 4 * dpr, rh = fs + 6 * dpr;
+      for (var q = 0; q < placed.length; q++) { var o = placed[q]; if (rx < o[0] + o[2] && rx + tw > o[0] && ry < o[1] + o[3] && ry + rh > o[1]) return; }
+      placed.push([rx, ry, tw, rh]); g.fillStyle = "rgba(10,16,32,.78)"; g.fillRect(rx, ry, tw, rh); g.fillStyle = "#fff"; g.fillText(t, p[0], p[1] - 9 * dpr); });
+    var pp = P(player.x, player.z); g.save(); g.translate(pp[0], pp[1]); g.rotate(Math.PI - player.face); g.scale(dpr * 1.3, dpr * 1.3);
+    g.beginPath(); g.moveTo(0, -11); g.lineTo(7.5, 8); g.lineTo(0, 4); g.lineTo(-7.5, 8); g.closePath(); g.fillStyle = "#d6f03c"; g.fill(); g.lineWidth = 2; g.strokeStyle = "#0f1b33"; g.stroke(); g.restore();
   }
 
   /* ============================================================
