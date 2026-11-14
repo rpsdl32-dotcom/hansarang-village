@@ -1103,6 +1103,20 @@ window.addEventListener("error", function (e) {
   }
   slitX.forEach(function (x) { slitWindow("x", MH.z1, x, 1); slitWindow("x", MH.z0, x, -1); });
   [-18.6, -14, -9.4].forEach(function (z) { slitWindow("z", MH.x0, z, -1); });
+  // Renewal: facade detailing (exterior only, no colliders) — metal parapet coping, granite plinth, window sills
+  (function facadeDetail() {
+    var cope = std(0xd9dcdf, { roughness: 0.35, metalness: 0.7 }), gran = std(0x4a4d52, { roughness: 0.45, metalness: 0.05 }), sill = std(0xe8e6e1, { roughness: 0.5 });
+    function cap(x0, x1, z0, z1, y) { var o = 0.12;
+      box((x0 + x1) / 2, y + 0.06, z1 + 0.05, x1 - x0 + o * 2, 0.12, TH + o, cope, { cast: false }); box((x0 + x1) / 2, y + 0.06, z0 - 0.05, x1 - x0 + o * 2, 0.12, TH + o, cope, { cast: false });
+      box(x0 - 0.05, y + 0.06, (z0 + z1) / 2, TH + o, 0.12, z1 - z0 + o * 2, cope, { cast: false }); box(x1 + 0.05, y + 0.06, (z0 + z1) / 2, TH + o, 0.12, z1 - z0 + o * 2, cope, { cast: false }); }
+    cap(MH.x0, MH.x1, MH.z0, MH.z1, MH.h); cap(AX.x0, AX.x1, AX.z0, AX.z1, AX.h);
+    function plinthX(z, x0, x1, out, skip) { var segs = [[x0, x1]]; (skip || []).forEach(function (k) { var n = []; segs.forEach(function (sg) { if (k[1] <= sg[0] || k[0] >= sg[1]) n.push(sg); else { if (k[0] > sg[0]) n.push([sg[0], k[0]]); if (k[1] < sg[1]) n.push([k[1], sg[1]]); } }); segs = n; });
+      segs.forEach(function (sg) { box((sg[0] + sg[1]) / 2, 0.3, z + out * (TH / 2 + 0.04), sg[1] - sg[0], 0.6, 0.08, gran, { cast: false }); }); }
+    function plinthZ(x, z0, z1, out) { box(x + out * (TH / 2 + 0.04), 0.3, (z0 + z1) / 2, 0.08, 0.6, z1 - z0, gran, { cast: false }); }
+    plinthX(MH.z1, MH.x0, MH.x1, 1); plinthX(MH.z0, MH.x0, MH.x1, -1); plinthZ(MH.x0, MH.z0, MH.z1, -1);
+    plinthX(AX.z1, AX.x0, AX.x1, 1, [[10.4, 12.8], [13.9, 16.9]]); plinthZ(AX.x1, AX.z0, AX.z1, 1); plinthX(AX.z0, AX.x0, AX.x1, -1);
+    slitX.forEach(function (x) { box(x, 3.88, MH.z1 + 0.16, 1.3, 0.1, 0.24, sill, { cast: false }); box(x, 3.88, MH.z0 - 0.16, 1.3, 0.1, 0.24, sill, { cast: false }); });
+  })();
 
   // tower: glass strip with red bands, sign, crosses, board
   box(8.25, 10.15, TW.z1 + 0.08, 2.3, 14.7, 0.16, M.tealGlass, { cast: false });
@@ -2134,7 +2148,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1114-2222", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1114-2223", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
