@@ -2148,7 +2148,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1114-2235", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1114-2236", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -3897,7 +3897,7 @@ window.addEventListener("error", function (e) {
     dead.forEach(function (od) { scene.remove(od); var oi = occluders.indexOf(od); if (oi >= 0) occluders.splice(oi, 1); if (od.geometry) od.geometry.dispose(); });
     var ph = 6.0, cx = (X0 + X1) / 2, cz = (Z0 + Z1) / 2, W = Z1 - Z0, L = X1 - X0;
     // ---- materials
-    var M_tileF = std(0xffffff, { map: canvasTex(256, 256, function (g) { var r = mulberry32(31); for (var y = 0; y < 2; y++) for (var x = 0; x < 2; x++) { var l = 222 + (r() - 0.5) * 10 | 0; g.fillStyle = "rgb(" + l + "," + (l - 10) + "," + (l - 26) + ")"; g.fillRect(x * 128, y * 128, 128, 128); } g.fillStyle = "rgba(150,135,110,.5)"; for (var k = 0; k <= 2; k++) { g.fillRect(k * 128 - 1, 0, 2, 256); g.fillRect(0, k * 128 - 1, 256, 2); } }), roughness: 0.35 });
+    var M_tileF = std(0xffffff, { map: canvasTex(256, 256, function (g) { var r = mulberry32(31); for (var y = 0; y < 2; y++) for (var x = 0; x < 2; x++) { var l = 208 + (r() - 0.5) * 10 | 0; g.fillStyle = "rgb(" + l + "," + (l - 14) + "," + (l - 36) + ")"; g.fillRect(x * 128, y * 128, 128, 128); } g.fillStyle = "rgba(150,135,110,.5)"; for (var k = 0; k <= 2; k++) { g.fillRect(k * 128 - 1, 0, 2, 256); g.fillRect(0, k * 128 - 1, 256, 2); } }), roughness: 0.35 });
     var M_fabric = std(0xffffff, { map: canvasTex(512, 512, function (g, w, h) {
       g.fillStyle = "#d3c8b6"; g.fillRect(0, 0, w, h);
       softClouds(g, w, h, 40, 41, "rgba(255,250,240,0.10)", "rgba(120,100,80,0.07)", 60, 180);
@@ -4066,7 +4066,7 @@ window.addEventListener("error", function (e) {
       var mm = new THREE.Matrix4(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1);
       parts.forEach(function (o) {
         var isEnd = /PewEnd/.test(o.name), cnt = isEnd ? n * 2 : n, im = new THREE.InstancedMesh(o.geometry, o.material, cnt), k = 0;
-        o.material.envMapIntensity = 0.6;
+        o.material.envMapIntensity = 0.6; o.material.roughness = 0.3; o.material.color.setHex(/Dark/.test(o.material.name) ? 0x8f5420 : 0xc27a34);   // honey-orange varnish as in the photos
         rows.forEach(function (x) { blocks.forEach(function (b) {
           var zc = (b[0] + b[1]) / 2, len = b[1] - b[0] - 0.08;
           if (isEnd) { [b[0] + 0.035, b[1] - 0.035].forEach(function (z) { mm.compose(new THREE.Vector3(x, Y, z), q, one); im.setMatrixAt(k++, mm); }); }
