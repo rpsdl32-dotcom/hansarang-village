@@ -2203,7 +2203,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-1738", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-1743", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -4413,10 +4413,14 @@ window.addEventListener("error", function (e) {
       a.instanceMatrix.needsUpdate = true; b.instanceMatrix.needsUpdate = true; scene.add(a); scene.add(b);
     });
     addRect(sx0, sx1, zf, zf + td * tiers);
-    [sx0 + 0.3, (sx0 + sx1) / 2, sx1 - 0.3].forEach(function (x) { box(x, y0 + 2.3, zf + td * tiers + 0.1, 0.16, 4.6, 0.16, M_steel); });
+    var OLDROOF = []; [sx0 + 0.3, (sx0 + sx1) / 2, sx1 - 0.3].forEach(function (x) { OLDROOF.push(box(x, y0 + 2.3, zf + td * tiers + 0.1, 0.16, 4.6, 0.16, M_steel)); });
     var roof = new THREE.Mesh(new THREE.BoxGeometry(sx1 - sx0 + 0.6, 0.1, td * tiers + 1.2), std(0xf2f2f0, { roughness: 0.6 })); roof.position.set((sx0 + sx1) / 2, y0 + 4.5, zf + td * tiers / 2 - 0.2); roof.rotation.x = -0.12; roof.castShadow = true; scene.add(roof);
-    box((sx0 + sx1) / 2, y0 + 4.3, zf - 0.75, sx1 - sx0 + 0.6, 0.35, 0.05, std(0x14203d), { cast: false });
-    plane(9, 0.3, std(0xffffff, { map: textTex(1152, 40, "#14203d", "#d6f03c", ["OLSC · ONE TEAM, ONE LOVE"], 30) }), (sx0 + sx1) / 2, y0 + 4.3, zf - 0.78, { rx: 0, ry: Math.PI });
+    OLDROOF.push(roof, box((sx0 + sx1) / 2, y0 + 4.3, zf - 0.75, sx1 - sx0 + 0.6, 0.35, 0.05, std(0x14203d), { cast: false }));
+    var standSign = plane(9, 0.3, std(0xffffff, { map: textTex(1152, 40, "#14203d", "#d6f03c", ["OLSC · ONE TEAM, ONE LOVE"], 30) }), (sx0 + sx1) / 2, y0 + 4.3, zf - 0.78, { rx: 0, ry: Math.PI });
+    if (THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load(ASSET("standroof.glb?v=1"), function (gl) { // Blender: cantilever steel truss roof with curved clear panels
+      gl.scene.traverse(function (o) { if (o.isMesh) { o.castShadow = true; if (/gs_panel/.test(o.material.name)) { o.material.transparent = true; o.material.opacity = 0.55; } } }); gl.scene.position.set((sx0 + sx1) / 2, y0, zf); scene.add(gl.scene);
+      OLDROOF.forEach(function (m) { if (m) m.visible = false; }); if (standSign) standSign.position.set((sx0 + sx1) / 2, y0 + 4.45, zf - 1.0);
+    }); } catch (e) { /* keep old roof */ }
     // west terrace (2 tiers behind the far goal)
     for (t = 0; t < 2; t++) box(-21.4 - 0.8 * t, y0 + th * (t + 1) / 2, 75, 0.8, th * (t + 1), 10, M_conc);
     addRect(-23.0, -20.95, 70, 80);
