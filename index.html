@@ -791,6 +791,8 @@ window.addEventListener("error", function (e) {
   var colliders = { rects: [], circles: [] };
   // assets (GLB / video / photos) live on GitHub Pages; elsewhere (artifact preview) load them from there by absolute URL
   var ASSET_BASE = /github\.io$/.test(location.hostname) ? "" : "https://rpsdl32-dotcom.github.io/hansarang-village/";
+  // low-spec phones/tablets: skip purely decorative Blender models (gameplay models and buildings still load)
+  var LITE = (function () { try { return matchMedia("(pointer:coarse)").matches && ((navigator.deviceMemory || 4) <= 4 || Math.min(screen.width, screen.height) < 400); } catch (e) { return false; } })() || /[?&]lite\b/.test(location.search);
   function ASSET(p) { return /^(https?:|data:|blob:)/.test(p) ? p : ASSET_BASE + p; }
   var CAFE_DX = -5; // Asher Cafe sits 5 m further west than first built: a parking strip lies between the cafe and the church (user-confirmed)
   // the cafe footprint is also enlarged 1.4x (x and depth, heights unchanged) around its front-east corner, to match the real interior size
@@ -2203,7 +2205,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-1743", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-1748", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -4287,7 +4289,7 @@ window.addEventListener("error", function (e) {
     // acrylic pulpits (stage + floor), four grey chairs, palms in white pots
     var PUL = [];
     function pulpit(x, y, h) { var ms = [box(x, y + h / 2, cz, 0.55, h, 0.9, M_acryl, { cast: false }), box(x + 0.29, y + h * 0.55, cz, 0.01, 0.35, 0.05, M.gold, { cast: false }), box(x + 0.29, y + h * 0.62, cz, 0.01, 0.05, 0.22, M.gold, { cast: false }), box(x, y + h + 0.02, cz, 0.7, 0.03, 1.0, M_acryl, { cast: false })]; PUL.push({ x: x, y: y, h: h, ms: ms }); }
-    if (THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load(ASSET("pulpit.glb?v=1"), function (gl) { // Blender: clear acrylic pulpit (side fins, slanted desk, lit edges, gold cross, bible) - still acrylic as in the photo
+    if (!LITE && THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load(ASSET("pulpit.glb?v=1"), function (gl) { // Blender: clear acrylic pulpit (side fins, slanted desk, lit edges, gold cross, bible) - still acrylic as in the photo
       gl.scene.traverse(function (o) { if (o.isMesh && /pu_acrylic|pu_edge/.test(o.material.name)) { o.material.transparent = true; o.material.opacity = /edge/.test(o.material.name) ? 0.8 : 0.42; o.material.depthWrite = false; } });
       PUL.forEach(function (p, i) { var c = i ? gl.scene.clone(true) : gl.scene; c.position.set(p.x, p.y, cz); c.scale.y = p.h / 1.15; scene.add(c); p.ms.forEach(function (m) { if (m) m.visible = false; }); });
     }); } catch (e) { /* keep boxes */ }
@@ -4417,7 +4419,7 @@ window.addEventListener("error", function (e) {
     var roof = new THREE.Mesh(new THREE.BoxGeometry(sx1 - sx0 + 0.6, 0.1, td * tiers + 1.2), std(0xf2f2f0, { roughness: 0.6 })); roof.position.set((sx0 + sx1) / 2, y0 + 4.5, zf + td * tiers / 2 - 0.2); roof.rotation.x = -0.12; roof.castShadow = true; scene.add(roof);
     OLDROOF.push(roof, box((sx0 + sx1) / 2, y0 + 4.3, zf - 0.75, sx1 - sx0 + 0.6, 0.35, 0.05, std(0x14203d), { cast: false }));
     var standSign = plane(9, 0.3, std(0xffffff, { map: textTex(1152, 40, "#14203d", "#d6f03c", ["OLSC · ONE TEAM, ONE LOVE"], 30) }), (sx0 + sx1) / 2, y0 + 4.3, zf - 0.78, { rx: 0, ry: Math.PI });
-    if (THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load(ASSET("standroof.glb?v=1"), function (gl) { // Blender: cantilever steel truss roof with curved clear panels
+    if (!LITE && THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load(ASSET("standroof.glb?v=1"), function (gl) { // Blender: cantilever steel truss roof with curved clear panels
       gl.scene.traverse(function (o) { if (o.isMesh) { o.castShadow = true; if (/gs_panel/.test(o.material.name)) { o.material.transparent = true; o.material.opacity = 0.55; } } }); gl.scene.position.set((sx0 + sx1) / 2, y0, zf); scene.add(gl.scene);
       OLDROOF.forEach(function (m) { if (m) m.visible = false; }); if (standSign) standSign.position.set((sx0 + sx1) / 2, y0 + 4.45, zf - 1.0);
     }); } catch (e) { /* keep old roof */ }
@@ -4437,7 +4439,7 @@ window.addEventListener("error", function (e) {
     // floodlight towers (light panels glow at night)
     var FLH = [];
     [[-21.5, 67.6], [9.4, 67.6], [-21.5, 84.4], [9.4, 84.4]].forEach(function (p) { cyl(p[0], y0 + 4.5, p[1], 0.12, 0.16, 9, M_steel, 8); addCircle(p[0], p[1], 0.25); var hd = box(p[0], y0 + 9.2, p[1], 1.4, 0.8, 0.2, std(0x2a2c30)); FLH.push(hd); hd.lookAt(-6, y0, 75); box(p[0], y0 + 9.2, p[1], 1.2, 0.6, 0.22, new THREE.MeshBasicMaterial({ color: 0xfff6dc }), { cast: false }).lookAt(-6, y0, 75); var gs = glowSprite(p[0], y0 + 9.2, p[1], 3.2, 0xfff2cc); gs.material.opacity = 0.55; });
-    if (THREE.GLTFLoader && location.protocol !== "file:") try {
+    if (!LITE && THREE.GLTFLoader && location.protocol !== "file:") try {
       new THREE.GLTFLoader().load(ASSET("floodhead.glb?v=1"), function (gl) { // Blender: 6-panel LED floodlight heads with frame + service ladder
         gl.scene.traverse(function (o) { if (o.isMesh && /fl_lamp/.test(o.material.name)) { o.material.emissive = new THREE.Color(0xfff6e0); EMISSIVE_NIGHT.push(o.material); } });
         FLH.forEach(function (hd, i) { var c = i ? gl.scene.clone(true) : gl.scene; c.position.copy(hd.position); scene.add(c); c.lookAt(-6, y0, 75); hd.visible = false; hd.children.forEach(function (ch) { ch.visible = false; }); });
@@ -5173,7 +5175,7 @@ window.addEventListener("error", function (e) {
     box(-60.2, by + 5.6, BW.z0 - 0.05, 8.8, 7.6, 0.06, M_red, { cast: false }); box(-60.2, by + 5.6, BW.z0 - 0.09, 8.2, 7.0, 0.04, std(0x22344e, { roughness: 0.15, metalness: 0.5 }), { cast: false });
     for (var m = 0; m < 6; m++) box(-64.0 + m * 1.55, by + 5.6, BW.z0 - 0.12, 0.06, 7.0, 0.04, std(0x2a2c30), { cast: false });
     [by + 3.4, by + 7.4].forEach(function (y) { box(-60.2, y, BW.z0 - 0.12, 8.2, 0.08, 0.05, std(0x2a2c30), { cast: false }); });
-    if (THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load(ASSET("bowlfront.glb?v=1"), function (gl) { // Blender: cornice, pilasters, red entrance canopy + glass doors, porthole rims, rooftop pin
+    if (!LITE && THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load(ASSET("bowlfront.glb?v=1"), function (gl) { // Blender: cornice, pilasters, red entrance canopy + glass doors, porthole rims, rooftop pin
       gl.scene.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); gl.scene.position.set(bcx, by, BW.z0); gl.scene.rotation.y = Math.PI; gl.scene.scale.x = -1; scene.add(gl.scene); }); } catch (e) { /* optional */ }
     // portholes down the left edge
     [by + 2.4, by + 5.4, by + 8.6, by + 11.6].forEach(function (y) { var ph = new THREE.Mesh(new THREE.CircleGeometry(0.42, 20), std(0x1c2a3a, { roughness: 0.2, metalness: 0.4 })); ph.position.set(-69.6, y, BW.z0 - 0.05); ph.rotation.y = Math.PI; scene.add(ph); });
@@ -5310,7 +5312,7 @@ window.addEventListener("error", function (e) {
       var rack = bx(-W / 2 + 0.7, 0.6, -6.5, 0.6, 1.2, 3, mat(0x2a2f45));
       BALLS.forEach(function (b, k) { var m = new THREE.Mesh(new THREE.SphereGeometry(RB, 32, 20), ballMatFor(b.c)); m.position.set(-W / 2 + 0.75, 1.32, -7.6 + k * 0.55); add(m); });
       bx(W / 2 - 1.4, 0.55, -7.5, 2.2, 1.1, 0.8, mat(0x8a5a36)); var shoe = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 0.5), new THREE.MeshBasicMaterial({ map: textTex(512, 128, "#ffd23f", "#14203d", ["신발 대여 · SHOES"], 54) })); shoe.position.set(W / 2 - 1.4, 2.0, -7.95); add(shoe);
-      if (THREE.GLTFLoader && location.protocol !== "file:") try { // Blender: ball-return hoods (2 balls on the rails) + pinsetter masking units over every pin deck
+      if (!LITE && !LITE && THREE.GLTFLoader && location.protocol !== "file:") try { // Blender: ball-return hoods (2 balls on the rails) + pinsetter masking units over every pin deck
         new THREE.GLTFLoader().load(ASSET("ballret.glb?v=1"), function (gl) { gl.scene.traverse(function (o) { if (o.isMesh && /bo_led/.test(o.material.name)) o.material.emissiveIntensity = 1.2; }); for (var j = 0; j < NL; j++) { var c = gl.scene.clone(true); c.position.set(laneX(j) + 0.92, 0, -2.2); c.rotation.y = Math.PI; add(c); } RETB.forEach(function (m) { m.visible = false; }); });
         new THREE.GLTFLoader().load(ASSET("pinset.glb?v=1"), function (gl) { for (var j = 0; j < NL; j++) { var c = gl.scene.clone(true); c.position.set(laneX(j), 0, LANE + 0.75); add(c); } });
       } catch (e) { /* keep boxes */ }
@@ -6314,15 +6316,15 @@ window.addEventListener("error", function (e) {
       OLDRAIL.forEach(function (m) { m.visible = false; }); sconces.forEach(function (m) { m.visible = false; });
       if (window.HSV_DIAG) HSV_DIAG.cafeDetail = true;
     }); } catch (e) { /* keep code rail */ }
-    if (THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load(ASSET("cafefront.glb?v=1"), function (gl) { // Blender: dark slatted roll blinds on the 1F glass (night photo)
+    if (!LITE && THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load(ASSET("cafefront.glb?v=1"), function (gl) { // Blender: dark slatted roll blinds on the 1F glass (night photo)
       gl.scene.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
       gl.scene.position.set(cafeX(-25.5), 0, CF.z1); gl.scene.scale.set(CAFE_S, 1, CAFE_S); scene.add(gl.scene);
       if (window.HSV_DIAG) HSV_DIAG.cafeFront = true;
     }); } catch (e) { /* optional */ }
     // Blender: tall white magnolia in front of the cafe (as in the user's daytime photo)
-    if (THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load(ASSET("magnolia.glb?v=1"), function (gl) { var mx = cafeX(-23.6), mz = CF.z1 + 2.4; gl.scene.traverse(function (o) { if (o.isMesh) { o.castShadow = true; } }); gl.scene.position.set(mx, groundH(mx, mz), mz); gl.scene.scale.setScalar(0.95); scene.add(gl.scene); addCircle(mx, mz, 0.35); }); } catch (e) { /* optional */ }
+    if (!LITE && THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load(ASSET("magnolia.glb?v=1"), function (gl) { var mx = cafeX(-23.6), mz = CF.z1 + 2.4; gl.scene.traverse(function (o) { if (o.isMesh) { o.castShadow = true; } }); gl.scene.position.set(mx, groundH(mx, mz), mz); gl.scene.scale.setScalar(0.95); scene.add(gl.scene); addCircle(mx, mz, 0.35); }); } catch (e) { /* optional */ }
     // Blender: 2-group espresso machine (red front, wood portafilters, cups on the warmer) + grinder + latte, replacing the steel boxes on the counter
-    if (THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load(ASSET("espresso.glb?v=1"), function (gl) {
+    if (!LITE && THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load(ASSET("espresso.glb?v=1"), function (gl) {
       var ex = cafeX(-27.6), ez = cafeZ(-6.35), v = new THREE.Vector3();
       scene.traverse(function (o) { if (!o.isMesh || o.parent !== scene && !(o.parent && o.parent.parent === scene)) return; o.getWorldPosition(v); if (Math.abs(v.x - ex) < 0.9 && Math.abs(v.z - ez) < 0.35 && v.y > 1.25 && v.y < 1.9) o.visible = false; });
       gl.scene.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
