@@ -2203,7 +2203,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-1734", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-1738", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -2772,10 +2772,11 @@ window.addEventListener("error", function (e) {
     netTex.wrapS = netTex.wrapT = THREE.RepeatWrapping; netTex.repeat.set(10, 5);
     var netM = new THREE.MeshBasicMaterial({ map: netTex, transparent: true, side: THREE.DoubleSide, depthWrite: false });
     var net = new THREE.Group(); net.position.set(GX, Y0, GZ); scene.add(net);
-    var back = new THREE.Mesh(new THREE.PlaneGeometry(HALF * 2, BAR, 12, 6), netM); back.rotation.y = Math.PI / 2; back.position.set(1.1, BAR / 2, 0); net.add(back);
+    var back = new THREE.Mesh(new THREE.PlaneGeometry(HALF * 2, BAR, 30, 14), netM); back.rotation.y = Math.PI / 2; back.position.set(1.1, BAR / 2, 0); net.add(back);
     [-1, 1].forEach(function (s) { var sd = new THREE.Mesh(new THREE.PlaneGeometry(1.1, BAR), netM); sd.position.set(0.55, BAR / 2, s * HALF); net.add(sd); });
     var roof = new THREE.Mesh(new THREE.PlaneGeometry(1.1, HALF * 2), netM); roof.rotation.x = -Math.PI / 2; roof.position.set(0.55, BAR, 0); net.add(roof);
     var backPos = back.geometry.attributes.position, backBase = backPos.array.slice();
+    (function rearFrame() { var fm = std(0x9aa0a8, { roughness: 0.4, metalness: 0.7 }); [-1, 1].forEach(function (sd) { var t1 = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, Math.hypot(1.1, BAR * 0.15) + 0.02, 8), fm); t1.position.set(0.55, BAR * 0.93, sd * HALF); t1.rotation.z = Math.PI / 2 - Math.atan2(BAR * 0.15, 1.1); net.add(t1); var t2 = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, BAR, 8), fm); t2.position.set(1.1, BAR / 2, sd * HALF); net.add(t2); var t3 = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.1, 8), fm); t3.rotation.z = Math.PI / 2; t3.position.set(0.55, 0.03, sd * HALF); net.add(t3); }); var tb = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, HALF * 2, 8), fm); tb.rotation.x = Math.PI / 2; tb.position.set(1.1, 0.03, 0); net.add(tb); })();
     // UI
     var ui = document.createElement("div"); ui.id = "fpk"; ui.hidden = true;
     ui.innerHTML = '<div class="fp-top"><span id="fp-score"></span><button type="button" id="fp-exit">나가기</button></div>' +
@@ -2823,7 +2824,7 @@ window.addEventListener("error", function (e) {
       S.turn = kind === "keep" ? "keep" : "kick"; setupTurn();
     }
     function setupTurn() {
-      setScore(); S.resolved = false; S.inNet = false; S.saved = false; S.t = 0; S.power = 0; S.charging = false; S.spin = 0; S.netK = 0;
+      setScore(); S.resolved = false; S.inNet = false; S.saved = false; S.slowDone = false; S.slow = 0; S.t = 0; S.power = 0; S.charging = false; S.spin = 0; S.netK = 0;
       ball.position.set(SPOT, Y0 + R, GZ); S.vel.set(0, 0, 0);
       S.kp.z = 0; S.kp.y = 1.0; S.kp.tz = 0; S.kp.ty = 1.0; S.kp.dive = 0; S.kp.fly = 0; keeper.rotation.set(0, -Math.PI / 2, 0);
       if (S.turn === "kick") {
@@ -2839,6 +2840,8 @@ window.addEventListener("error", function (e) {
         var cz = (Math.random() < 0.5 ? -1 : 1) * (0.6 + Math.random() * 1.75), cy = 0.25 + Math.random() * 1.75;
         if (Math.random() < 0.18) cz *= 0.3; S.aiShot = { z: cz, y: cy, power: 0.55 + Math.random() * 0.4, curve: (Math.random() - 0.5) * 1.2 };
         flash("막아라!", 1000);
+        // the kicker gives away a tell (right about 6 times in 10): read it, or call the bluff
+        var tellR = S.aiShot.z > 0, honest = Math.random() < 0.6; setTimeout(function () { if (S.on && S.turn === "keep") flash("👀 키커가 " + ((honest ? tellR : !tellR) ? "오른쪽" : "왼쪽") + "을 힐끔 봐요…", 1100); }, 1100);
       }
     }
     // --- aiming input (drag / mouse / keys)
@@ -2920,6 +2923,9 @@ window.addEventListener("error", function (e) {
     tickers.push(function (dt) {
       if (S.on && mode !== "fpk") { S.on = false; ui.hidden = true; kicker.visible = false; keeper.visible = true; resetBall(); }
       if (!S.on) return; dt = Math.min(dt || 0.016, 0.033);
+      // dramatic slow motion for the last metres before the goal line (once per shot)
+      if (S.phase === "flight" && !S.resolved && !S.slowDone && ball.position.x > GX - 3.0 && ball.position.x < GX) { S.slow = 0.5; S.slowDone = true; }
+      if (S.slow > 0) { S.slow -= dt; dt *= 0.3; }
       var eyeY = Y0 + 1.62;
       // ---- net ripple
       if (S.netK > 0) { S.netK = Math.max(0, S.netK - dt * 1.6); for (var i = 0; i < backPos.count; i++) { var bx = backBase[i * 3], by = backBase[i * 3 + 1]; var d = Math.hypot(bx - S.netZ, by - S.netY); backPos.setZ(i, Math.sin(d * 4 - (1 - S.netK) * 14) * 0.35 * S.netK * Math.max(0, 1 - d / 3)); } backPos.needsUpdate = true; }
