@@ -2291,7 +2291,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-2247", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-2248", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -7371,9 +7371,11 @@ window.addEventListener("error", function (e) {
       var on = !behind && Math.abs(sx) < 0.9 && Math.abs(sy) < 0.8;
       if (!on) { var k = Math.max(Math.abs(sx) / 0.88, Math.abs(sy) / 0.76, 0.0001); sx /= k; sy /= k; }
       var W2 = window.innerWidth, H2 = window.innerHeight;
-      pin.style.left = ((sx * 0.5 + 0.5) * W2).toFixed(0) + "px"; pin.style.top = ((-sy * 0.5 + 0.5) * H2).toFixed(0) + "px";
       ico.textContent = on ? "▼" : "➤"; ico.style.transform = on ? "none" : "rotate(" + Math.atan2(-sy, sx).toFixed(3) + "rad)";
       lab.textContent = G2.cur.n + " · " + Math.round(dist) + "m"; pin.style.display = "block";
+      var pw = pin.offsetWidth || 160, px = (sx * 0.5 + 0.5) * W2, py = (-sy * 0.5 + 0.5) * H2;
+      px = Math.max(pw / 2 + 8, Math.min(W2 - pw / 2 - 8, px)); py = Math.max(72, Math.min(H2 - 170, py)); // keep clear of the top HUD, the joystick and the action button
+      pin.style.left = px.toFixed(0) + "px"; pin.style.top = py.toFixed(0) + "px";
     }
     tickers.push(guideTick);
     if (/[?&]diag=hansarang\b/.test(location.search)) window.__guide = { G2: G2, tick: guideTick, pin: pin, btn: gb };
