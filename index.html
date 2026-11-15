@@ -490,9 +490,22 @@ body.touch .kbd-only { display: none; }
 /* Three.js r170 loader + r128 compatibility layer.
    The game code was written for r128 (global THREE, sRGBEncoding, legacy light units, raw hex colours).
    This keeps its look identical while running on the modern renderer, then starts the game script below. */
-import * as NS from "https://cdn.jsdelivr.net/npm/three@0.170.0/+esm";
-import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/loaders/GLTFLoader.js/+esm";
-import { DRACOLoader } from "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/loaders/DRACOLoader.js/+esm";
+/* Self-hosted copy first (./vendor/three, same site), public CDN only as a fallback (e.g. the preview page has no vendor folder).
+   Both come from the same three@0.170.0 release, so everything stays on one three instance. */
+let NS, GLTFLoader, DRACOLoader;
+{
+  const LOC = "./vendor/three/", CDN = "https://cdn.jsdelivr.net/npm/three@0.170.0/";
+  const imp = async (base, local) => {
+    const t = await import(local ? base + "three.module.min.js" : base + "+esm");
+    const g = await import(local ? base + "examples/jsm/loaders/GLTFLoader.js" : base + "examples/jsm/loaders/GLTFLoader.js/+esm");
+    const d = await import(local ? base + "examples/jsm/loaders/DRACOLoader.js" : base + "examples/jsm/loaders/DRACOLoader.js/+esm");
+    return [t, g.GLTFLoader, d.DRACOLoader];
+  };
+  let src = "local";
+  try { [NS, GLTFLoader, DRACOLoader] = await imp(LOC, true); }
+  catch (e) { src = "cdn"; [NS, GLTFLoader, DRACOLoader] = await imp(CDN, false); }
+  window.__HSV_LIB = src;
+}
 const T = Object.assign({}, NS, { GLTFLoader, DRACOLoader, REVISION_HSV: "170" });
 T.ColorManagement.enabled = false;               // hex colours behave like r128 (the palette was tuned that way)
 T.sRGBEncoding = 3001; T.LinearEncoding = 3000;
@@ -2294,10 +2307,15 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-2313", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-2320", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
-    function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
+    function loadLib() { return new Promise(function (res, rej) {
+      if (window.supabase) return res();
+      var URLS = ["./vendor/supabase.js", "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js", "https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"], i = 0, done = false;
+      function next() { if (i >= URLS.length) { err("라이브러리 로드 실패", "모든 경로"); rej(); return; } var s = document.createElement("script"); s.src = URLS[i++]; s.onload = function () { if (window.supabase) { done = true; res(); } else next(); }; s.onerror = function () { next(); }; document.head.appendChild(s); }
+      next(); setTimeout(function () { if (!window.supabase && !done) { err("연결 시간 초과", "라이브러리"); } }, 15000);
+    }); }
     function makeRoom() {
       D.lib = "ok";
       var client = window.supabase.createClient(HSV_SUPA.url, HSV_SUPA.key, { auth: { persistSession: false, autoRefreshToken: false }, realtime: { params: { eventsPerSecond: 20 }, heartbeatIntervalMs: 15000 } });
@@ -3533,6 +3551,37 @@ window.addEventListener("error", function (e) {
   document.getElementById("chat-form").addEventListener("submit", function (e) { e.preventDefault(); sendChat(chatIn.value); chatIn.value = ""; });
   document.getElementById("chat-near").addEventListener("click", function () { NET.near = !NET.near; this.setAttribute("aria-pressed", NET.near ? "true" : "false"); this.textContent = NET.near ? "근처에만" : "모두에게"; });
   Array.prototype.forEach.call(document.querySelectorAll("#chat-emo button"), function (b) { b.addEventListener("click", function () { sendChat(b.textContent); }); });
+  /* RESUME CODE: progress lives only in this browser; this exports/imports it as a text code (no server, no account).
+     Only this game's own keys are read or written; chat reports and anything else are never included. */
+  var RK_OK = function (k) { return k === "hansarang-village-v4" || k === "hansarang-village-game-v1" || (/^hsv_[a-z0-9_]+$/.test(k) && k !== "hsv_reports" && k !== "hsv_chatoff" && k !== "hsv_badwords"); };
+  function rcHash(t) { var h = 5381, i; for (i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0; return h.toString(36); }
+  function rcMake() {
+    var o = {}, i, k; try { for (i = 0; i < localStorage.length; i++) { k = localStorage.key(i); if (RK_OK(k)) o[k] = localStorage.getItem(k); } } catch (e) { /* ignore */ }
+    var b = btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    return "HSV1." + b + "." + rcHash(b);
+  }
+  function rcParse(code) {
+    code = String(code || "").replace(/\s+/g, ""); var m = /^HSV1\.([A-Za-z0-9_-]+)\.([a-z0-9]+)$/.exec(code); if (!m) return { err: "코드 모양이 맞지 않아요. 처음부터 끝까지 그대로 붙여넣어 주세요." };
+    if (rcHash(m[1]) !== m[2]) return { err: "코드가 중간에 잘렸거나 글자가 바뀌었어요. 다시 복사해 주세요." };
+    if (m[1].length > 140000) return { err: "코드가 너무 길어요." };
+    try { var b = m[1].replace(/-/g, "+").replace(/_/g, "/"); while (b.length % 4) b += "="; var o = JSON.parse(decodeURIComponent(escape(atob(b)))), out = {}, n = 0; if (!o || typeof o !== "object") throw 0; Object.keys(o).forEach(function (k) { if (RK_OK(k) && typeof o[k] === "string" && o[k].length < 100000) { out[k] = o[k]; n++; } }); if (!n) return { err: "불러올 기록이 없어요." }; return { data: out, n: n }; } catch (e) { return { err: "코드를 읽지 못했어요. 다시 복사해 주세요." }; }
+  }
+  PANEL_CHIP.resume = "이어하기 코드";
+  EXTRA_PANELS.resume = function (add, rows) {
+    head("Resume", "이어하기 코드", "폰을 바꾸거나 브라우저 기록을 지워도 포인트·도장·기록을 이어갈 수 있어요. 계정은 필요 없습니다.");
+    pEl("p", "tl-title", "1. 내 기록을 코드로 저장");
+    var code = rcMake(), l1 = pEl("label", "p-field", "내 이어하기 코드 (카카오톡 ‘나와의 채팅’ 등에 붙여두세요)"), t1 = el("textarea"); t1.rows = 4; t1.readOnly = true; t1.value = code; l1.appendChild(t1);
+    bigBtn("코드 복사", function () { t1.select(); try { navigator.clipboard.writeText(code).then(function () { toast("복사했어요", "안전한 곳에 붙여두세요."); }, function () { toast("직접 복사해 주세요", "위 칸을 길게 눌러 복사하세요."); }); } catch (e) { toast("직접 복사해 주세요", "위 칸을 길게 눌러 복사하세요."); } });
+    pEl("p", "tl-title", "2. 코드로 기록 불러오기");
+    var l2 = pEl("label", "p-field", "코드 붙여넣기"), t2 = el("textarea"); t2.rows = 4; t2.placeholder = "HSV1.… 로 시작하는 코드"; t2.id = "rc-in"; l2.appendChild(t2);
+    var armed = false, ib = bigBtn("불러오기", function () {
+      var r = rcParse(t2.value); if (r.err) { toast("불러오지 못했어요", r.err); return; }
+      if (!armed) { armed = true; ib.textContent = "지금 기록이 코드의 기록으로 바뀝니다. 한 번 더 누르세요"; ib.classList.add("on"); setTimeout(function () { armed = false; ib.textContent = "불러오기"; ib.classList.remove("on"); }, 5000); return; }
+      try { Object.keys(r.data).forEach(function (k) { localStorage.setItem(k, r.data[k]); }); } catch (e) { toast("저장하지 못했어요", "브라우저 저장공간이 막혀 있어요."); return; }
+      toast("불러왔어요", r.n + "개 항목을 복원했어요. 잠시 뒤 새로 열립니다."); setTimeout(function () { location.reload(); }, 1200);
+    });
+    pEl("p", "p-sum", "코드에는 닉네임·포인트·모은 도장·기록·설정이 들어 있어요. 비밀번호는 없으니 남에게 보여주지 않으면 안전합니다. 불러오면 이 기기의 기록은 코드의 기록으로 바뀌어요.");
+  };
   PANEL_CHIP.chatmod = "채팅 관리";
   EXTRA_PANELS.chatmod = function (add, rows) {
     head("Chat Safety", "채팅 관리", "보호자·관리자용입니다. 이 설정은 이 기기에서만 적용돼요.");
@@ -4917,7 +4966,7 @@ window.addEventListener("error", function (e) {
      and comes back automatically if anything fails.
      ============================================================ */
   var GLBT = { active: false, root: null, mixer: null, acts: {}, cur: null, stats: null, flip: false, fps: 0, fpsAcc: 0, fpsN: 0, loading: false, name: "" };
-  var GLB_LIBS = ["https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js", "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"];
+  var GLB_LIBS = window.__HSV_LIB === "local" ? ["./vendor/three128/GLTFLoader.js", "./vendor/three128/DRACOLoader.js"] : ["https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js", "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"];
   function glbLoadLibs(cb) {
     if (THREE.GLTFLoader) { cb(true); return; } // r170 build ships GLTFLoader/DRACOLoader
     var left = GLB_LIBS.length, ok = true, done = false, fin = function (v) { if (done) return; done = true; cb(v); };
@@ -4945,7 +4994,7 @@ window.addEventListener("error", function (e) {
     glbLoadLibs(function (ok) {
       if (!ok) { GLBT.loading = false; toast("GLB 시험", "모델 불러오기 도구를 받지 못했어요. 인터넷 연결을 확인해 주세요. 기존 캐릭터는 그대로예요."); return; }
       var url = URL.createObjectURL(file), loader = new THREE.GLTFLoader();
-      if (THREE.DRACOLoader) { var dr = new THREE.DRACOLoader(); dr.setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/"); loader.setDRACOLoader(dr); }
+      if (THREE.DRACOLoader) { var dr = new THREE.DRACOLoader(); dr.setDecoderPath(window.__HSV_LIB === "local" ? "./vendor/three/examples/jsm/libs/draco/gltf/" : "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/"); loader.setDRACOLoader(dr); }
       loader.load(url, function (gltf) {
         URL.revokeObjectURL(url); GLBT.loading = false;
         try {
@@ -5739,7 +5788,7 @@ window.addEventListener("error", function (e) {
     return { open: open, close: close, state: S, roll: roll, totals: totals };
   })();
   if (/[?&]diag=hansarang\b/.test(location.search)) window.__bowl = BOWL;
-  if (/[?&]diag=hansarang\b/.test(location.search)) { window.__van = function () { return VAN; }; window.__tickers = tickers; window.__drive = function () { enterVan(); }; window.__tp = function (x, z, y, f) { player.x = x; player.z = z; player.y = y || 0; player.face = f || 0; cam.yaw = player.face; snapCam = true; }; window.__geo = { SANCT: SANCT, Y2: Y2 }; window.__scene = scene; window.__cam = camera; window.__T = THREE; window.__race = { start: startRace, back: backToTown, get R() { return RACE; }, get VAN() { return VAN; }, applyVeh: function (i) { return applyVeh(i); } }; window.__av = function (k, v) { G.av[k] = v; rebuildAvatar(); }; window.__lead = function (i) { leadSpeak(i); return LEAD[i] ? LEAD[i].length : 0; }; window.__chat = { mask: mask, clean: isClean, line: chatLine, send: sendChat, report: reportPeer, NET: NET, peers: function () { return NET.peers; } }; }
+  if (/[?&]diag=hansarang\b/.test(location.search)) { window.__van = function () { return VAN; }; window.__tickers = tickers; window.__drive = function () { enterVan(); }; window.__tp = function (x, z, y, f) { player.x = x; player.z = z; player.y = y || 0; player.face = f || 0; cam.yaw = player.face; snapCam = true; }; window.__geo = { SANCT: SANCT, Y2: Y2 }; window.__scene = scene; window.__cam = camera; window.__T = THREE; window.__race = { start: startRace, back: backToTown, get R() { return RACE; }, get VAN() { return VAN; }, applyVeh: function (i) { return applyVeh(i); } }; window.__av = function (k, v) { G.av[k] = v; rebuildAvatar(); }; window.__lead = function (i) { leadSpeak(i); return LEAD[i] ? LEAD[i].length : 0; }; window.__resume = { make: rcMake, parse: rcParse }; window.__chat = { mask: mask, clean: isClean, line: chatLine, send: sendChat, report: reportPeer, NET: NET, peers: function () { return NET.peers; } }; }
   EXTRA_ACTIONS.bowling = function () {
     var d = new Date(), day = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
     if (G.bowlVisit !== day) { G.bowlVisit = day; saveG(); gain(10, 10); }
@@ -7018,7 +7067,7 @@ window.addEventListener("error", function (e) {
     [["day", "낮"], ["dusk", "노을"], ["night", "밤"]].forEach(function (t) { mbtn(r2, t[1], function () { document.getElementById("t-" + t[0]).click(); buildMenu(); }, curTod === t[0]); });
     mbtn(r2, "눈", function () { document.getElementById("btn-snow").click(); buildMenu(); }, snowing);
     var r3 = el("div", "mrow"); menu.appendChild(r3);
-    mbtn(r3, "계절 · " + (document.getElementById("btn-season").textContent || ""), click("btn-season")); mbtn(r3, "음악", click("btn-bgm")); mbtn(r3, "접속 현황", click("btn-net")); mbtn(r3, "채팅 관리", function () { toggleMenu(false); openPanel("chatmod"); }); if (coarse && navigator.vibrate) mbtn(r3, "진동", function () { var o = window.__haptic && window.__haptic(localStorage.getItem("hsv_haptic") === "0"); toast("진동", o ? "켰어요." : "껐어요."); }); mbtn(r3, "그래픽", function () { toggleMenu(false); openPanel("gfx"); }); mbtn(r3, "GLB 시험", function () { toggleMenu(false); openPanel("glb"); }); mbtn(r3, "퀘스트 · 패스", function () { toggleMenu(false); openPanel("quest"); }); mbtn(r3, "스타렉스 타기", function () { toggleMenu(false); if (mode) return; VAN.x = -18; VAN.z = 25.85; VAN.h = -Math.PI / 2; VAN.v = 0; vanPose(0); fadeTo(function () { enterVan(); }); });
+    mbtn(r3, "계절 · " + (document.getElementById("btn-season").textContent || ""), click("btn-season")); mbtn(r3, "음악", click("btn-bgm")); mbtn(r3, "접속 현황", click("btn-net")); mbtn(r3, "채팅 관리", function () { toggleMenu(false); openPanel("chatmod"); }); mbtn(r3, "이어하기 코드", function () { toggleMenu(false); openPanel("resume"); }); if (coarse && navigator.vibrate) mbtn(r3, "진동", function () { var o = window.__haptic && window.__haptic(localStorage.getItem("hsv_haptic") === "0"); toast("진동", o ? "켰어요." : "껐어요."); }); mbtn(r3, "그래픽", function () { toggleMenu(false); openPanel("gfx"); }); mbtn(r3, "GLB 시험", function () { toggleMenu(false); openPanel("glb"); }); mbtn(r3, "퀘스트 · 패스", function () { toggleMenu(false); openPanel("quest"); }); mbtn(r3, "스타렉스 타기", function () { toggleMenu(false); if (mode) return; VAN.x = -18; VAN.z = 25.85; VAN.h = -Math.PI / 2; VAN.v = 0; vanPose(0); fadeTo(function () { enterVan(); }); });
     menu.appendChild(el("div", "msec", "이동과 정보"));
     DEST.filter(function (d) { return d.n.charAt(0) !== "T"; }).forEach(function (d) { var b = el("button", "menu-item"); b.type = "button"; b.appendChild(el("span", null, d.n)); b.appendChild(el("small", null, "이동")); b.addEventListener("click", function () { toggleMenu(false); teleport(d); }); menu.appendChild(b); });
     [["오늘의 퀘스트 · 출석", "daily"], ["새가족 안내", "guide"], ["사진 앨범", "album"]].forEach(function (m) { var b = el("button", "menu-item", m[0]); b.type = "button"; b.addEventListener("click", function () { toggleMenu(false); openPanel(m[1]); }); menu.appendChild(b); });
@@ -7307,8 +7356,8 @@ window.addEventListener("error", function (e) {
   var POST = { on: false, composer: null };
   (function setupPost() {
     if (coarse || /[?&]nopost\b/.test(location.search)) return;
-    var B = "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/postprocessing/";
-    Promise.all(["EffectComposer", "RenderPass", "GTAOPass", "UnrealBloomPass", "OutputPass"].map(function (n) { return import(B + n + ".js/+esm"); })).then(function (m) {
+    var B = window.__HSV_LIB === "local" ? "./vendor/three/examples/jsm/postprocessing/" : "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/postprocessing/", X = window.__HSV_LIB === "local" ? ".js" : ".js/+esm";
+    Promise.all(["EffectComposer", "RenderPass", "GTAOPass", "UnrealBloomPass", "OutputPass"].map(function (n) { return import(B + n + X); })).then(function (m) {
       var w = window.innerWidth, h = window.innerHeight, c = new m[0].EffectComposer(renderer);
       c.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5)); c.setSize(w, h);
       c.addPass(new m[1].RenderPass(scene, camera));
