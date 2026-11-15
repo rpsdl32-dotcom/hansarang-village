@@ -885,7 +885,10 @@ window.addEventListener("error", function (e) {
     return LOW;
   }
   function inSite(x, z) { for (var i = 0; i < SITE_RECTS.length; i++) { var r = SITE_RECTS[i]; if (x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1) return true; } return false; }
-  function natH(x, z) {
+  var SAM = { x: -100, half: 11.5 };
+  function samBase(z) { var h = 0, t = -26 - z; if (t > 0) h += t * 0.16 + Math.max(0, t - 32) * 0.2; h += LOW * smooth(-2, 10, z); if (z > 21) h -= (z - 21) * 0.13; return h - 56 * 0.07; }
+  function natH(x, z) { var hh = natH0(x, z), dd = Math.abs(x - SAM.x); if (dd < SAM.half + 8 && z > -40) return lerp(samBase(z), hh, smooth(SAM.half, SAM.half + 8, dd)); if (z > 18 && z < 34 && x > -100 && x < -86) return lerp(samBase(26), hh, smooth(4, 9, Math.abs(z - 26))); return hh; }
+  function natH0(x, z) {
     var h = 0, t = -26 - z;
     if (t > 0) h += t * 0.16 + Math.max(0, t - 32) * 0.2;
     var dx = x + 15, dz = z + 100; h += 15 * Math.exp(-(dx * dx + dz * dz) / (2 * 30 * 30));
@@ -1744,6 +1747,8 @@ window.addEventListener("error", function (e) {
     if (Math.hypot(tx + 13, tz + 87) < 8) continue;
     if (tx > -67 && tx < -55 && tz > -10 && tz < 110) continue;
     if (tx > -63 && tx < -43 && tz > -43 && tz < 15) continue;
+    if (tx > -129 && tx < -76 && tz > -30 && tz < 104) continue; // Samhak-ro corridor
+    if (tx > -100 && tx < -84 && tz > 16 && tz < 36) continue;
     pines.push({ x: tx, z: tz, s: 0.8 + R() * 0.7 });
   }
   var nP = pines.length;
@@ -2168,7 +2173,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-1057", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-1117", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -3939,6 +3944,73 @@ window.addEventListener("error", function (e) {
   })();
 
   /* ============================================================
+     SAMHAK-RO (from the user's street-view photo): 6-lane boulevard west of
+     the bowling alley, T-junction with the existing main road, zebra
+     crossings, signal gantry, plane trees, utility poles with overhead wires,
+     a white 5-storey grocery-mart block and apartments. Generic signs only.
+     ============================================================ */
+  (function samhakRo() {
+    var X = SAM.x, Z0 = -24, Z1 = 102, RW = 16;
+    // clear the pine forest off the boulevard, sidewalks and the new building plots
+    (function () { var zero = new THREE.Matrix4().makeScale(0, 0, 0), m4 = new THREE.Matrix4(), p3 = new THREE.Vector3(), q4 = new THREE.Quaternion(), s3 = new THREE.Vector3();
+      var inZ = function (x, z) { return (x > -129 && x < -76 && z > -30 && z < 104) || (x > -100 && x < -84 && z > 18 && z < 34); };
+      [pTrunk, pc1, pc2, pc3].forEach(function (im) { if (!im) return; var hit = false; for (var i = 0; i < im.count; i++) { im.getMatrixAt(i, m4); m4.decompose(p3, q4, s3); if (inZ(p3.x, p3.z)) { im.setMatrixAt(i, zero); hit = true; } } if (hit) im.instanceMatrix.needsUpdate = true; });
+      if (typeof rtrees !== "undefined") rtrees.forEach(function (t) { if (inZ(t.x, t.z)) t.s = 0; });
+    })();
+    var line = function (c) { return std(c, { roughness: 0.7, polygonOffset: true, polygonOffsetFactor: -7, polygonOffsetUnits: -7 }); };
+    var asphM = std(0xffffff, { map: T.asphalt, roughness: 0.95, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+    var walkM = std(0xc9c2b6, { map: T.concrete || null, roughness: 0.9 }), curbM = std(0xa9a69f, { roughness: 0.8 });
+    var Wl = line(0xf4f4f4), Yl = line(0xf2c230);
+    [asphM, walkM, curbM, Wl, Yl].forEach(function (m) { m.side = THREE.DoubleSide; });
+    var P = function (dx) { return [[X + dx, Z1], [X + dx, Z0]]; }; // ribbons must run -z (or +x) to face up
+    ribbon(P(0), RW, asphM, 0.06, 6);
+    ribbon(P(-RW / 2 - 1.6), 3.2, walkM, 0.2, 3); ribbon(P(RW / 2 + 1.6), 3.2, walkM, 0.2, 3);
+    ribbon(P(-RW / 2 - 0.08), 0.2, curbM, 0.24, 1); ribbon(P(RW / 2 + 0.08), 0.2, curbM, 0.24, 1);
+    ribbon(P(-0.16), 0.12, Yl, 0.08, 1); ribbon(P(0.16), 0.12, Yl, 0.08, 1);
+    ribbon(P(-RW / 2 + 0.35), 0.14, Wl, 0.08, 1); ribbon(P(RW / 2 - 0.35), 0.14, Wl, 0.08, 1);
+    // dashed lane lines (3 lanes each way), broken at the junction and crossings
+    [-5.2, -2.6, 2.6, 5.2].forEach(function (dx) { for (var z = Z0 + 2; z < Z1 - 3; z += 6) { if (Math.abs(z - 26) < 12 || Math.abs(z - 70) < 4) continue; ribbon([[X + dx, z + 3], [X + dx, z]], 0.14, Wl, 0.08, 1); } });
+    // connector from the existing main road (ends at x -90) into the junction
+    ribbon([[X + RW / 2 - 0.5, 26], [-89, 25.8]], 6.4, asphM, 0.06, 6);
+    ribbon([[X + RW / 2 + 1.6, 29.6], [X + RW / 2 + 1.6, 22.4]], 3.4, asphM, 0.22, 3); // curb ramp gap in the east sidewalk
+    // zebra crossings like the photo (thick bars across all lanes)
+    function zebra(zc) { for (var x = X - RW / 2 + 0.6; x < X + RW / 2 - 0.4; x += 1.0) ribbon([[x, zc + 2], [x, zc - 2]], 0.55, Wl, 0.09, 1); }
+    zebra(17); zebra(35); zebra(70);
+    for (var x = X - RW / 2 + 0.4; x < X + RW / 2; x += 2) ribbon([[x, 14.6], [x + 1.4, 14.6]], 0.3, Wl, 0.09, 1);
+    // signal gantry at the junction (east side, arm over the lanes) + pedestrian signals
+    var gy = groundH(X + RW / 2 + 1.2, 19), metal = M.metal, dark = std(0x1c1c1e);
+    cyl(X + RW / 2 + 1.2, gy + 3.2, 19, 0.16, 0.2, 6.4, metal, 10); box(X + 3, gy + 6.2, 19, RW / 2 + 0.6, 0.18, 0.18, metal, { cast: false }); addCircle(X + RW / 2 + 1.2, 19, 0.25);
+    [X + 3.5, X - 0.5].forEach(function (sx, i) { box(sx, gy + 5.8, 19, 1.6, 0.45, 0.42, dark, { cast: false }); [[0xff3b3b, -0.5], [0xffb020, 0], [0x3bd16a, 0.5]].forEach(function (l, k) { var m = new THREE.Mesh(new THREE.CircleGeometry(0.15, 14), std(l[0], { emissive: l[0], emissiveIntensity: k === 2 ? 1.3 : 0.08 })); m.position.set(sx + l[1], gy + 5.8, 19.22); scene.add(m); }); });
+    box(X + 6.4, gy + 6.25, 19, 0.9, 0.8, 0.06, std(0xffffff, { map: textTex(128, 128, "#1f4fb0", "#ffffff", ["▲"], 70) }), { cast: false });
+    // trees, street lights and utility poles with overhead wires
+    var trunkM = std(0x6b5136, { roughness: 0.9 }), leafM = std(0x5d8a3c, { roughness: 0.9 }), leafG = new THREE.IcosahedronGeometry(1.5, 1);
+    for (var z = Z0 + 4; z < Z1 - 2; z += 9) [X - RW / 2 - 1.9, X + RW / 2 + 1.9].forEach(function (tx, s) { if (Math.abs(z - 26) < 6 && s) return; var ty = groundH(tx, z) + 0.2; cyl(tx, ty + 1.3, z, 0.12, 0.17, 2.6, trunkM, 7); var lf = new THREE.Mesh(leafG, leafM); lf.position.set(tx, ty + 3.6, z); lf.scale.set(1.1, 1.5, 1.1); lf.castShadow = true; scene.add(lf); addCircle(tx, z, 0.25); });
+    var poles = []; for (z = Z0 + 2; z < Z1; z += 17) { var px = X - RW / 2 - 3.0, py = groundH(px, z) + 0.2; cyl(px, py + 5, z, 0.13, 0.17, 10, std(0x9a958c, { roughness: 0.8 }), 8); box(px, py + 9.3, z, 1.8, 0.12, 0.12, std(0x6d6a64), { cast: false }); addCircle(px, z, 0.25); poles.push([px, py + 9.2, z]); }
+    var wireM = new THREE.MeshBasicMaterial({ color: 0x1c1c1e });
+    for (var i = 0; i < poles.length - 1; i++) [-0.8, 0, 0.8].forEach(function (o) { var a = poles[i], b = poles[i + 1], L = Math.hypot(b[1] - a[1], b[2] - a[2]); var w = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, L, 4), wireM); w.position.set(a[0] + o, (a[1] + b[1]) / 2 - 0.25, (a[2] + b[2]) / 2); w.rotation.x = Math.PI / 2 - Math.atan2(b[1] - a[1], b[2] - a[2]); scene.add(w); });
+    for (z = Z0 + 10; z < Z1; z += 22) { var lx = X + RW / 2 + 0.9, ly = groundH(lx, z) + 0.2; cyl(lx, ly + 3.5, z, 0.08, 0.11, 7, metal, 8); box(lx - 1.0, ly + 7, z, 2.0, 0.1, 0.1, metal, { cast: false }); box(lx - 1.9, ly + 6.9, z, 0.5, 0.12, 0.25, std(0xffffff, { emissive: 0xfff0c8, emissiveIntensity: 0.4 }), { cast: false }); addCircle(lx, z, 0.2); }
+    // buildings (generic stand-ins in the photo's shapes)
+    var winT = canvasTex(256, 256, function (g, w, h) { g.fillStyle = "#f3f4f2"; g.fillRect(0, 0, w, h); g.fillStyle = "#4f8fa1"; g.fillRect(70, 60, 116, 140); g.strokeStyle = "#e3e3df"; g.lineWidth = 8; g.strokeRect(66, 56, 124, 148); g.fillStyle = "#dcdcd6"; g.fillRect(0, 236, w, 20); });
+    function block(x0, x1, z0, z1, h, mat, tile) { var y = Math.min(groundH(x0, z0), groundH(x1, z0), groundH(x0, z1), groundH(x1, z1)) - 0.3; var m = box((x0 + x1) / 2, y + h / 2, (z0 + z1) / 2, x1 - x0, h, z1 - z0, mat, { occ: true, col: true }); return y; }
+    // 1) white 5-storey grocery mart, west side by the junction
+    var martM = std(0xffffff, { map: winT, roughness: 0.75 }); martM.map = winT.clone(); martM.map.wrapS = martM.map.wrapT = THREE.RepeatWrapping; martM.map.repeat.set(5, 5); martM.map.needsUpdate = true;
+    var my = block(-127, -112, 30, 46, 17, martM);
+    plane(10, 1.6, std(0xffffff, { map: textTex(1024, 160, "#ffffff", "#1f3fa8", ["식자재마트"], 120) }), -119.5, my + 18.2, 29.9, { rx: 0, ry: Math.PI });
+    box(-119.5, my + 18.2, 30.1, 10.4, 1.9, 0.2, M.metal, { cast: false });
+    plane(1.4, 7, std(0xffffff, { map: textTex(140, 700, "#ffffff", "#1f3fa8", ["식", "자", "재", "마", "트"], 100) }), -111.9, my + 11, 33, { rx: 0, ry: Math.PI / 2 });
+    box(-119.5, my + 1.6, 29.6, 15.4, 3.2, 0.4, std(0x9b4a2a, { roughness: 0.7 }), { cast: false });
+    plane(14, 1.0, std(0xffffff, { map: textTex(1024, 72, "#d23a2a", "#ffffff", ["마트 · 주차장 입구"], 54) }), -119.5, my + 3.6, 29.35, { rx: 0, ry: Math.PI });
+    // 2) low beige wall-front shops (left foreground of the photo)
+    block(-126, -111, -6, 22, 4.2, std(0xe9dcbd, { map: T.stucco, roughness: 0.9 }));
+    // 3) right side: 3-storey commercial + two apartment slabs (north of the bowling alley, clear of its lot)
+    block(-90.5, -79, 48, 62, 10, std(0xd9d6cf, { map: winT, roughness: 0.8 }));
+    var aptM = std(0xffffff, { map: winT.clone(), roughness: 0.8 }); aptM.map.wrapS = aptM.map.wrapT = THREE.RepeatWrapping; aptM.map.repeat.set(4, 8); aptM.map.needsUpdate = true;
+    block(-90.5, -78, 70, 82, 26, aptM); block(-90.5, -78, 88, 100, 22, aptM);
+    // street name sign
+    var sy = groundH(X + RW / 2 + 2.2, 12); cyl(X + RW / 2 + 2.2, sy + 1.6, 12, 0.06, 0.06, 3.2, metal, 6);
+    plane(1.8, 0.45, std(0xffffff, { map: textTex(360, 90, "#1f4fb0", "#ffffff", ["삼학로"], 54) }), X + RW / 2 + 2.2, sy + 3.0, 12, { rx: 0, ry: -Math.PI / 2 });
+  })();
+  /* ============================================================
      STREET FRONT (from the street-side photo): main road with median
      fence, crosswalk and signal, single-storey beige building along the
      lower lot, church pylon sign, picket fence banner, side street
@@ -5324,7 +5396,7 @@ window.addEventListener("error", function (e) {
     return { open: open, close: close, state: S, roll: roll, totals: totals };
   })();
   if (/[?&]diag=hansarang\b/.test(location.search)) window.__bowl = BOWL;
-  if (/[?&]diag=hansarang\b/.test(location.search)) { window.__tp = function (x, z, y, f) { player.x = x; player.z = z; player.y = y || 0; player.face = f || 0; cam.yaw = player.face; snapCam = true; }; window.__geo = { SANCT: SANCT, Y2: Y2 }; window.__scene = scene; window.__cam = camera; window.__T = THREE; window.__av = function (k, v) { G.av[k] = v; rebuildAvatar(); }; window.__lead = function (i) { leadSpeak(i); return LEAD[i] ? LEAD[i].length : 0; }; }
+  if (/[?&]diag=hansarang\b/.test(location.search)) { window.__tp = function (x, z, y, f) { player.x = x; player.z = z; player.y = y || 0; player.face = f || 0; cam.yaw = player.face; snapCam = true; }; window.__geo = { SANCT: SANCT, Y2: Y2 }; window.__scene = scene; window.__cam = camera; window.__T = THREE; window.__race = { start: startRace, back: backToTown, get R() { return RACE; }, get VAN() { return VAN; }, applyVeh: function (i) { return applyVeh(i); } }; window.__av = function (k, v) { G.av[k] = v; rebuildAvatar(); }; window.__lead = function (i) { leadSpeak(i); return LEAD[i] ? LEAD[i].length : 0; }; }
   EXTRA_ACTIONS.bowling = function () {
     var d = new Date(), day = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
     if (G.bowlVisit !== day) { G.bowlVisit = day; saveG(); gain(10, 10); }
@@ -5475,6 +5547,7 @@ window.addEventListener("error", function (e) {
   }
   function leaveVan() {
     if (mode !== "drive") return;
+    if (VAN.x > 300) { RACE.on = false; if (RACE.arrow) RACE.arrow.visible = false; if (RACE.ui) { RACE.ui.hidden = true; RACE.big.hidden = true; } VAN.x = -18; VAN.z = 25.85; VAN.h = -Math.PI / 2; VAN.v = 0; vanPose(0); } // leaving at the circuit drops you back in town
     var sx = VAN.x + Math.cos(VAN.h) * 1.8, sz = VAN.z - Math.sin(VAN.h) * 1.8; if (vanHits(sx, sz, 0)) { sx = VAN.x - Math.cos(VAN.h) * 1.8; sz = VAN.z + Math.sin(VAN.h) * 1.8; }
     vanUI(false); VAN.v = 0; SFX.engine(0, 0);
     exitModeBase();
@@ -5504,6 +5577,7 @@ window.addEventListener("error", function (e) {
     if (mode !== "drive") { vanPose(dt); return; }
     var K = VAN.keys, T = VAN.touch;
     var brk = (K.s || K.arrowdown || K[" "] || T.brk) ? 1 : 0, acc = (K.w || K.arrowup || T.acc || (VAN.auto && !brk && VAN.v < 9)) ? 1 : 0, st = ((K.a || K.arrowleft || T.l) ? 1 : 0) - ((K.d || K.arrowright || T.r) ? 1 : 0), drift = K.shift && K[" "] ? 0 : T.drift;
+    if (RACE.on && RACE.lock > 0) { acc = 0; brk = 0; }
     if (K.shift && !brk && VAN.boostCd <= 0) { VAN.boost = 1.8; VAN.boostCd = 6; }
     VAN.boost = Math.max(0, VAN.boost - dt); VAN.boostCd = Math.max(0, VAN.boostCd - dt);
     var vmax = VAN.boost > 0 ? VEHS[VAN.veh || 0].max + 8 : VEHS[VAN.veh || 0].max;
@@ -5523,7 +5597,9 @@ window.addEventListener("error", function (e) {
       if (!vanHits(nx, VAN.z, nh)) { VAN.x = nx; VAN.h = nh; VAN.v *= 0.6; } else if (!vanHits(VAN.x, nz, nh)) { VAN.z = nz; VAN.h = nh; VAN.v *= 0.6; } else { VAN.v = -VAN.v * 0.15; if (!vanHits(VAN.x, VAN.z, nh)) VAN.h = nh; }
     }
     else { VAN.h = nh; VAN.x = nx; VAN.z = nz; }
-    if (Math.abs(VAN.x) > 125 || VAN.z > 100 || VAN.z < -130) { VAN.x = clamp(VAN.x, -125, 125); VAN.z = clamp(VAN.z, -130, 100); VAN.v = 0; }
+    var inCirc = VAN.x > 505 && VAN.x < 695 && VAN.z > -65 && VAN.z < 65;
+    if (!inCirc && VAN.x > 300) { VAN.x = clamp(VAN.x, 512, 688); VAN.z = clamp(VAN.z, -58, 58); VAN.v = 0; }
+    else if (!inCirc && (Math.abs(VAN.x) > 125 || VAN.z > 100 || VAN.z < -130)) { VAN.x = clamp(VAN.x, -125, 125); VAN.z = clamp(VAN.z, -130, 100); VAN.v = 0; }
     // suspension + wheels
     var ta = (acc ? -0.035 : 0) + (brk && VAN.v > 0.5 ? 0.05 : 0); VAN.pitch += (ta - VAN.pitch) * Math.min(1, dt * 5);
     VAN.roll += (-VAN.steer * Math.min(1, Math.abs(VAN.v) / 14) * 0.06 - VAN.roll) * Math.min(1, dt * 5);
@@ -5578,6 +5654,94 @@ window.addEventListener("error", function (e) {
     }); }
     return true;
   }
+  /* ===== RACING CIRCUIT (off-map, separate from walking areas) + TIME ATTACK ===== */
+  var RACE = { on: false, lock: 0, lap: 0, laps: 3, cp: 0, t: 0, best: 0, ui: null, cps: [], arrow: null, start: null };
+  (function buildCircuit() { return; // circuit removed (user: Samhak-ro replaces it)
+    var CX = 600, CZ = 0, Y = 7.0, W = 12, pts = [];
+    // centerline: stadium oval with an S-bend on the back straight (closed loop, counter-clockwise)
+    function C(t) { // t 0..1
+      var L = 70, R = 28, per = 2 * L + 2 * Math.PI * R, s = t * per, x, z;
+      if (s < L) { x = -L / 2 + s; z = -R; }
+      else if (s < L + Math.PI * R) { var a = (s - L) / R - Math.PI / 2; x = L / 2 + Math.cos(a) * R; z = Math.sin(a) * R; }
+      else if (s < 2 * L + Math.PI * R) { var u = s - L - Math.PI * R; x = L / 2 - u; z = R + Math.sin(u / L * Math.PI * 2) * 7; }
+      else { var b = (s - 2 * L - Math.PI * R) / R + Math.PI / 2; x = -L / 2 + Math.cos(b) * R; z = Math.sin(b) * R; }
+      return new THREE.Vector3(CX + x, Y, CZ + z);
+    }
+    var N = 220; for (var i = 0; i < N; i++) pts.push(C(i / N));
+    // ground + track ribbon + curbs
+    var grass = std(0x5f9a45, { roughness: 1 }); var gp = plane(200, 140, grass, CX, Y - 0.02, CZ); gp.userData.noLift = true; var cliff = new THREE.Mesh(new THREE.BoxGeometry(200, 7, 140), std(0x6b5a44, { roughness: 1 })); cliff.position.set(CX, Y - 3.6, CZ); cliff.userData.noLift = true; scene.add(cliff);
+    var pos = [], uv = [], idx = [], cpos = [], ccol = [], cidx = [];
+    for (i = 0; i <= N; i++) {
+      var p = pts[i % N], q = pts[(i + 1) % N], d = q.clone().sub(p).normalize(), nx = -d.z, nz = d.x;
+      pos.push(p.x + nx * W / 2, Y + 0.02, p.z + nz * W / 2, p.x - nx * W / 2, Y + 0.02, p.z - nz * W / 2); uv.push(0, i * 0.5, 1, i * 0.5);
+      if (i < N) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
+      [1, -1].forEach(function (sd, k) { var o = W / 2 * sd, o2 = (W / 2 + 0.9) * sd; cpos.push(p.x + nx * o, Y + 0.04, p.z + nz * o, p.x + nx * o2, Y + 0.04, p.z + nz * o2); var red = Math.floor(i / 3) % 2; var c = red ? [0.85, 0.12, 0.12] : [0.95, 0.95, 0.95]; ccol.push(c[0], c[1], c[2], c[0], c[1], c[2]); });
+    }
+    for (i = 0; i < N; i++) for (var k = 0; k < 2; k++) { var a0 = (i * 2 + k) * 2, a1 = ((i + 1) * 2 + k) * 2; cidx.push(a0, a0 + 1, a1, a0 + 1, a1 + 1, a1); }
+    var tg = new THREE.BufferGeometry(); tg.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); tg.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2)); tg.setIndex(idx); tg.computeVertexNormals();
+    var asphT = canvasTex(256, 256, function (g, w, h) { g.fillStyle = "#3d4044"; g.fillRect(0, 0, w, h); for (var n = 0; n < 2500; n++) { g.fillStyle = Math.random() < 0.5 ? "rgba(255,255,255,.05)" : "rgba(0,0,0,.08)"; g.fillRect(Math.random() * w, Math.random() * h, 2, 2); } g.fillStyle = "rgba(255,255,255,.75)"; g.fillRect(w / 2 - 3, 0, 6, h / 2); }); asphT.wrapS = asphT.wrapT = THREE.RepeatWrapping;
+    var track = new THREE.Mesh(tg, std(0xffffff, { map: asphT, roughness: 0.85, side: THREE.DoubleSide })); track.receiveShadow = true; track.userData.noLift = true; scene.add(track);
+    var cg = new THREE.BufferGeometry(); cg.setAttribute("position", new THREE.Float32BufferAttribute(cpos, 3)); cg.setAttribute("color", new THREE.Float32BufferAttribute(ccol, 3)); cg.setIndex(cidx); cg.computeVertexNormals();
+    var curb = new THREE.Mesh(cg, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7, side: THREE.DoubleSide })); curb.userData.noLift = true; scene.add(curb);
+    // barriers: tyre stacks / rail on both sides (also colliders)
+    var railM = std(0xdfe3e8, { roughness: 0.4, metalness: 0.5 }), tyreM = std(0x18191b, { roughness: 0.9 }), postG = new THREE.BoxGeometry(0.15, 0.9, 0.15), dm = new THREE.Object3D(), posts = [];
+    for (i = 0; i < N; i += 2) { var p2 = pts[i], q2 = pts[(i + 1) % N], d2 = q2.clone().sub(p2).normalize(); [1, -1].forEach(function (sd) { var off = W / 2 + 2.2; posts.push([p2.x - d2.z * off * sd, p2.z + d2.x * off * sd, Math.atan2(d2.x, d2.z)]); colliders.circles.push({ x: p2.x - d2.z * off * sd, z: p2.z + d2.x * off * sd, r: 0.7 }); }); }
+    var im = new THREE.InstancedMesh(new THREE.BoxGeometry(0.25, 0.75, 2.6), railM, posts.length);
+    posts.forEach(function (pp, n) { dm.position.set(pp[0], Y + 0.45, pp[1]); dm.rotation.set(0, pp[2], 0); dm.updateMatrix(); im.setMatrixAt(n, dm.matrix); }); im.castShadow = true; scene.add(im);
+    // start/finish line + gantry
+    var s0 = pts[8], s1 = pts[9], sd0 = s1.clone().sub(s0).normalize(), sAng = Math.atan2(sd0.x, sd0.z);
+    var chk = canvasTex(256, 64, function (g, w, h) { for (var y = 0; y < 2; y++) for (var x = 0; x < 8; x++) { g.fillStyle = (x + y) % 2 ? "#111" : "#fff"; g.fillRect(x * 32, y * 32, 32, 32); } });
+    var line = new THREE.Mesh(new THREE.PlaneGeometry(W, 1.6), new THREE.MeshStandardMaterial({ map: chk })); line.rotation.set(-Math.PI / 2, 0, sAng + Math.PI / 2); line.position.set(s0.x, Y + 0.05, s0.z); scene.add(line);
+    var gant = new THREE.Group(); gant.position.set(s0.x, Y, s0.z); gant.rotation.y = sAng; scene.add(gant);
+    [-1, 1].forEach(function (sd) { var pl = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 0.4), std(0x14203d)); pl.position.set(sd * (W / 2 + 1.2), 3, 0); pl.castShadow = true; gant.add(pl); });
+    var ban = new THREE.Mesh(new THREE.BoxGeometry(W + 3, 1.3, 0.3), new THREE.MeshBasicMaterial({ map: textTex(1024, 96, "#14203d", "#d6f03c", ["HAN SARANG CIRCUIT · OLSC"], 58), toneMapped: false })); ban.position.y = 6.2; gant.add(ban);
+    RACE.start = { x: pts[4].x, z: pts[4].z, h: Math.atan2(pts[5].x - pts[4].x, pts[5].z - pts[4].z) };
+    // checkpoints: 8 gates (posts + glow ring on the next one)
+    for (i = 1; i <= 8; i++) { var cp = pts[Math.floor(i / 9 * N + 8) % N]; RACE.cps.push({ x: cp.x, z: cp.z }); }
+    RACE.cps.push({ x: s0.x, z: s0.z }); // finish
+    RACE.arrow = new THREE.Mesh(new THREE.TorusGeometry(W / 2, 0.25, 8, 40), new THREE.MeshBasicMaterial({ color: 0xd6f03c, transparent: true, opacity: 0.85 })); RACE.arrow.visible = false; scene.add(RACE.arrow);
+    RACE.pts = pts;
+    // grandstand + light poles for atmosphere
+    for (k = 0; k < 3; k++) box(CX, Y + 0.4 + k * 0.45, CZ - 28 - 9 - k * 0.9, 50, 0.8 + k * 0.9, 0.9, std([0x2f6fd6, 0xd6f03c, 0xf08a2a][k], { roughness: 0.6 }));
+    [[-45, -45], [45, -45], [-45, 45], [45, 45]].forEach(function (o) { cyl(CX + o[0], Y + 5, CZ + o[1], 0.18, 0.25, 10, M.metal, 8); });
+  })();
+  function raceUI(show) {
+    if (!RACE.ui) { var u = el("div"); u.id = "race-ui"; u.style.cssText = "position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 150px);z-index:6;padding:8px 16px;border-radius:14px;background:rgba(10,14,30,.82);color:#fff;font:800 16px/1.35 'IBM Plex Sans KR',sans-serif;text-align:center;pointer-events:none;min-width:220px"; document.body.appendChild(u); RACE.ui = u;
+      var big = el("div"); big.id = "race-big"; big.style.cssText = "position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:7;font:900 96px/1 'IBM Plex Sans KR',sans-serif;color:#d6f03c;text-shadow:0 6px 24px rgba(0,0,0,.5);pointer-events:none"; document.body.appendChild(big); RACE.big = big; }
+    RACE.ui.hidden = !show; RACE.big.hidden = !show;
+  }
+  function fmt(t) { var m = Math.floor(t / 60), s = t - m * 60; return m + ":" + (s < 10 ? "0" : "") + s.toFixed(2); }
+  function bestKey() { return "hsv_race_best_" + VEHS[VAN.veh || 0].id; }
+  function startRace() {
+    if (mode && mode !== "drive") return;
+    var S = RACE.start; VAN.x = S.x; VAN.z = S.z; VAN.h = S.h; VAN.v = 0; vanPose(0);
+    var go = function () { RACE.on = true; RACE.lock = 3.2; RACE.lap = 1; RACE.cp = 0; RACE.t = 0; try { RACE.best = +localStorage.getItem(bestKey()) || 0; } catch (e) { RACE.best = 0; } raceUI(true); toast("타임어택", VEHS[VAN.veh || 0].name + " · 3바퀴 · 노란 고리를 순서대로 통과하세요."); };
+    if (mode === "drive") { vanCam(1, true); go(); } else fadeTo(function () { enterVan(); vanCam(1, true); go(); });
+  }
+  function stopRace(msg) { RACE.on = false; RACE.arrow.visible = false; raceUI(false); if (msg) toast("레이싱", msg); }
+  function backToTown() { stopRace(); VAN.x = -18; VAN.z = 25.85; VAN.h = -Math.PI / 2; VAN.v = 0; vanPose(0); if (mode === "drive") vanCam(1, true); }
+  tickers.push(function (dt) {
+    if (!RACE.on) return;
+    if (mode !== "drive") { stopRace("차에서 내려 레이스를 멈췄어요."); return; }
+    var S = RACE.start;
+    if (RACE.lock > 0) { RACE.lock -= dt; VAN.v = 0; VAN.x = S.x; VAN.z = S.z; VAN.h = S.h; RACE.big.textContent = RACE.lock > 0.2 ? String(Math.ceil(RACE.lock - 0.2)) : "GO!"; if (RACE.lock <= 0) { setTimeout(function () { RACE.big.textContent = ""; }, 600); SFX.play("goal"); } }
+    else RACE.t += dt;
+    var c = RACE.cps[RACE.cp]; RACE.arrow.visible = true; RACE.arrow.position.set(c.x, 10.2 + Math.sin(performance.now() / 300) * 0.3, c.z);
+    var nx = RACE.cps[(RACE.cp + 1) % RACE.cps.length]; RACE.arrow.lookAt(nx.x, 10.2, nx.z); RACE.arrow.rotateY(Math.PI / 2);
+    if (RACE.lock <= 0 && Math.hypot(VAN.x - c.x, VAN.z - c.z) < 8) {
+      RACE.cp++; SFX.play("coin");
+      if (RACE.cp >= RACE.cps.length) {
+        RACE.cp = 0;
+        if (RACE.lap >= RACE.laps) {
+          var t = RACE.t, nb = !RACE.best || t < RACE.best; if (nb) { RACE.best = t; try { localStorage.setItem(bestKey(), String(t)); } catch (e) { /* storage unavailable */ } }
+          RACE.big.textContent = nb ? "신기록!" : "FINISH"; setTimeout(function () { RACE.big.textContent = ""; }, 2500);
+          gain(nb ? 30 : 15, nb ? 20 : 10); stopRace((nb ? "🏆 개인 신기록 " : "완주 ") + fmt(t) + " (" + VEHS[VAN.veh || 0].name + ")"); return;
+        }
+        RACE.lap++; RACE.big.textContent = RACE.lap === RACE.laps ? "마지막 바퀴!" : "LAP " + RACE.lap; setTimeout(function () { RACE.big.textContent = ""; }, 1200);
+      }
+    }
+    RACE.ui.innerHTML = "랩 " + RACE.lap + " / " + RACE.laps + " · 체크 " + RACE.cp + " / " + RACE.cps.length + "<br><span style='font-size:26px'>" + fmt(RACE.t) + "</span><br><span style='color:#d6f03c;font-size:13px'>최고 " + (RACE.best ? fmt(RACE.best) : "-") + " · " + VEHS[VAN.veh || 0].name + "</span>";
+  });
   EXTRA_ACTIONS.van = function () { enterVan(); };
   EXTRA_PANELS.vanskin = function (add, rows) {
     head("Garage", "차고", "탈 차를 고르고 색을 바꿔요. 이 기기에 저장돼요. (실제 브랜드 차량이 아닌 독자 디자인)");
