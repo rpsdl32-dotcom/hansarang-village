@@ -667,7 +667,14 @@ window.addEventListener("error", function (e) {
     for (var k = 0; k < 3000; k++) { g.fillStyle = "rgba(0,0,0,0.08)"; g.fillRect(r() * w, r() * h, 2, 2); }
   });
   T.concrete = canvasTex(256, 256, function (g, w, h) { noiseFill(g, w, h, "#9a9892", 0.12, 4, 7); });
-  T.asphalt = canvasTex(256, 256, function (g, w, h) { noiseFill(g, w, h, "#45474b", 0.16, 2, 9); });
+  T.asphalt = canvasTex(512, 512, function (g, w, h) { // aged city asphalt like the Samhak-ro photo: aggregate grain, sealed crack lines, patch repairs, oil stains
+    noiseFill(g, w, h, "#4a4c50", 0.18, 2, 9); var r = mulberry32(77);
+    for (var k = 0; k < 5; k++) { g.fillStyle = "rgba(" + (r() < 0.5 ? "30,31,34" : "95,96,98") + "," + (0.10 + r() * 0.12) + ")"; var px = r() * w, py = r() * h; g.fillRect(px, py, 40 + r() * 90, 30 + r() * 70); }
+    for (k = 0; k < 6; k++) { var gr = g.createRadialGradient(r() * w, r() * h, 2, r() * w, r() * h, 30 + r() * 30); gr.addColorStop(0, "rgba(20,20,22,.22)"); gr.addColorStop(1, "rgba(20,20,22,0)"); g.fillStyle = gr; g.fillRect(0, 0, w, h); }
+    g.lineCap = "round";
+    for (k = 0; k < 9; k++) { var x = r() * w, y = r() * h; g.strokeStyle = "rgba(18,18,20," + (0.35 + r() * 0.3) + ")"; g.lineWidth = 1 + r() * 1.6; g.beginPath(); g.moveTo(x, y); for (var s2 = 0; s2 < 8; s2++) { x += (r() - 0.5) * 40; y += (r() - 0.3) * 30; g.lineTo(x, y); } g.stroke(); }
+    for (k = 0; k < 3000; k++) { g.fillStyle = r() < 0.5 ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.08)"; g.fillRect(r() * w, r() * h, 1.5, 1.5); }
+  });
   T.block = canvasTex(512, 256, function (g, w, h) {
     var r = mulberry32(11); g.fillStyle = "#5c5a54"; g.fillRect(0, 0, w, h);
     var bw = 128, bh = 64;
@@ -2187,7 +2194,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-1646", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-1653", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -4166,6 +4173,12 @@ window.addEventListener("error", function (e) {
     for (var tz = cz - 3.8; tz <= cz + 3.8; tz += 1.27) { var tl = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.24, 10), M_whiteP); tl.position.set(-10.55, Y + ph - 0.78, tz); tl.rotation.z = -0.8; scene.add(tl); }
     [[-8.6, Z0 + 3.6], [-8.6, Z1 - 3.6]].forEach(function (p) { box(p[0], Y + ph - 0.02, p[1], 0.9, 0.04, 0.9, std(0xeeeeee), { cast: false }); box(p[0], Y + ph - 0.05, p[1], 0.5, 0.02, 0.5, std(0x9a9a9a), { cast: false }); });
     var plA = new THREE.PointLight(0xfff3e2, 0.9, 16, 1.6); plA.position.set(-3, Y + ph - 0.8, cz); scene.add(plA);
+    // feel-wider pass (size unchanged): warm cove light lines along both side walls and the back, soft wall-wash lights
+    (function () { var cove = new THREE.MeshBasicMaterial({ color: 0xfff1d6 });
+      [Z0 + 0.12, Z1 - 0.12].forEach(function (z) { box(cx, Y + ph - 0.08, z, L - 0.6, 0.05, 0.08, cove, { cast: false, receive: false }); });
+      box(X1 - 0.12, Y + ph - 0.08, cz, 0.08, 0.05, W - 0.6, cove, { cast: false, receive: false });
+      [[cx - 3, Z0 + 1.2], [cx - 3, Z1 - 1.2], [cx + 4, Z0 + 1.2], [cx + 4, Z1 - 1.2]].forEach(function (q) { var pl = new THREE.PointLight(0xffe9c8, 0.5, 9, 1.8); pl.position.set(q[0], Y + ph - 0.6, q[1]); scene.add(pl); });
+    })();
     // ceiling-hung TVs either side of the stage + ceiling projector (TV content: church name / service order, no fake video)
     (function tvs() {
       var slides = [["목포한사랑교회", "주일 예배"], ["예배로 부름", "찬양 · 기도 · 말씀"], ["오늘의 말씀", "함께 읽어요"], ["환영합니다", "새가족을 축복합니다"]], k = 0;
