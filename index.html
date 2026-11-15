@@ -2203,7 +2203,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-1719", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-1723", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -2510,7 +2510,16 @@ window.addEventListener("error", function (e) {
   cyl(7.7, Y0 + 1.1, 72.5, 0.07, 0.07, 2.2, M.white, 8); cyl(7.7, Y0 + 1.1, 77.5, 0.07, 0.07, 2.2, M.white, 8); addCircle(7.7, 72.5, 0.2); addCircle(7.7, 77.5, 0.2);
   box(7.7, Y0 + 2.2, 75, 0.12, 0.12, 5.1, M.white);
   plane(5, 2.2, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.18, side: THREE.DoubleSide }), 8.5, Y0 + 1.1, 75, { rx: 0, ry: Math.PI / 2, receive: false });
-  var keeper = placePerson({ shirt: 0xd6f03c, pants: 0x1b2336, hair: 0x221a14 }, 7.0, 75, -Math.PI / 2);
+  var keeper = placePerson({ shirt: 0xf26a1b, pants: 0x14161a, hair: 0x221a14, top: "jersey" }, 7.0, 75, -Math.PI / 2); // GK kit: orange jersey, black shorts
+  (function gkGloves() { // big padded goalkeeper gloves on both hands (follow the arm rig)
+    var gm = std(0xf4f6f2, { roughness: 0.6 }), pm = std(0x2fae5a, { roughness: 0.5 }), u = keeper.userData;
+    [u.handL, u.handR].forEach(function (h) { if (!h) return; var gl = new THREE.Group(); var palm = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.13, 0.06), gm); gl.add(palm); var cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.05, 10), pm); cuff.position.y = 0.08; gl.add(cuff); var fing = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.06, 0.05), gm); fing.position.y = -0.09; gl.add(fing); var strip = new THREE.Mesh(new THREE.BoxGeometry(0.115, 0.025, 0.065), pm); strip.position.y = 0.02; gl.add(strip); gl.scale.setScalar(1.6); h.add(gl); });
+  })();
+  function gkPose(t, divez) { // ready stance with arms out, arms stretched overhead while diving
+    var u = keeper.userData; if (!u.armL) return;
+    if (divez) { u.armL.rotation.set(-2.8, 0, 0.3); u.armR.rotation.set(-2.8, 0, -0.3); }
+    else { var b = Math.sin(t * 6) * 0.08; u.armL.rotation.set(-0.5, 0, 0.75 + b); u.armR.rotation.set(-0.5, 0, -0.75 - b); if (u.legL) { u.legL.rotation.z = 0.12; u.legR.rotation.z = -0.12; } }
+  }
   var ball = new THREE.Mesh(soccerGeo(0.18), ballMat); ball.castShadow = true; scene.add(ball);
   function resetBall() { ball.position.set(-1.2, Y0 + 0.2, 75); keeper.position.z = 75; }
   resetBall();
@@ -2821,7 +2830,7 @@ window.addEventListener("error", function (e) {
         S.phase = "aim"; S.aimY = 1.0; S.aimZ = 0; kicker.visible = false; keeper.visible = true;
         $u("fp-kick").hidden = false; $u("fp-keep").hidden = true; $u("fp-ret").style.display = ""; $u("fp-pow").style.width = "0";
         // AI keeper: reads the shot after a short delay, quality varies per shot
-        S.kp.react = 0.16 + Math.random() * 0.14; S.kp.skill = 0.55 + Math.random() * 0.35;
+        var lvl = Math.min(5, S.round || 0); S.kp.react = Math.max(0.1, 0.18 + Math.random() * 0.14 - lvl * 0.012); S.kp.skill = Math.min(0.97, 0.5 + lvl * 0.06 + Math.random() * 0.3); // keeper gets sharper every round
         flash("조준하고 슛!", 1200);
       } else {
         S.phase = "runup"; kicker.visible = true; kicker.position.set(SPOT - 3.2, groundH(SPOT, GZ), GZ - 1.2); kicker.rotation.y = Math.PI / 2;
@@ -2876,6 +2885,7 @@ window.addEventListener("error", function (e) {
       flash(goal ? (mine ? "골!!" : "실점") : why === "save" ? (mine ? "막혔다!" : "선방!!") : why === "post" ? "골대!" : "빗나감", 1500);
       if ((goal && mine) || (!goal && !mine)) { SFX.play("goal"); if (typeof STAD !== "undefined") STAD.cheer = 2.5; } else SFX.play("fail");
       // juice: streaks, LED board, confetti, camera kick
+      if (goal && mine) { var bz = Math.abs(ball.position.z - GZ), byy = ball.position.y - Y0; if (bz > HALF - 0.75 && byy > BAR - 0.7) { setTimeout(function () { flash("골든 코너! +10P 🎯", 1400); }, 600); gain(10, 5); } }
       if (mine) { S.streak = goal ? (S.streak || 0) + 1 : 0; }
       var good = (goal && mine) || (!goal && !mine);
       if (window.__boardFx) window.__boardFx(goal ? (mine ? "GOAL!" : "실점") : why === "save" ? (mine ? "SAVED" : "선방!") : why === "post" ? "골대!" : "MISS", good ? "#1f4fd8" : "#b3261e", mine && goal && S.streak > 1 ? S.streak + "연속 골! 🔥" : "");
@@ -2962,6 +2972,8 @@ window.addEventListener("error", function (e) {
       }
       if (S.turn === "keep" || S.turn === "kick") {
         // keeper body moves toward its dive target (max lateral speed ~6 m/s)
+        if (S.turn === "kick" && S.phase === "aim" && !S.kp.dive) S.kp.tz = Math.sin(performance.now() / 380) * 0.45; // keeper sways on the line to put pressure on the kicker
+        gkPose(performance.now() / 1000, S.kp.dive && Math.abs(S.kp.z) > 0.4);
         var spd = S.kp.dive ? 6.2 : 2; S.kp.z += clamp(S.kp.tz - S.kp.z, -spd * dt, spd * dt); S.kp.y += clamp(S.kp.ty - S.kp.y, -4 * dt, 4 * dt);
         keeper.position.set(7.0, groundH(7, 75) + Math.max(0, S.kp.y - 1.0) * 0.6, GZ + S.kp.z); keeper.rotation.set(0, -Math.PI / 2, 0); keeper.rotation.x = -S.kp.z * 0.32 * (S.kp.dive ? 1 : 0.2);
       }
