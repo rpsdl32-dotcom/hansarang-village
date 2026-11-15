@@ -526,6 +526,23 @@ window.addEventListener("error", function (e) {
     { title: "말씀", sub: "서로 사랑하라", verse: "한 사랑으로 한 몸 된 공동체", dur: 44, style: "drone" },
     { title: "축도", sub: "평안히 가십시오.", dur: 24, style: "amen" }
   ];
+  /* worship slides: praise lyrics + sermon points shown on the sanctuary screen and the ceiling TVs.
+     Default = one public-domain hymn (Newton 1779) as a clearly-labelled example. Churches type their own
+     (licensed) lyrics/points in the "가사·말씀 입력" box; saved only in this browser. A blank line starts a new slide. */
+  var WSL = (function () {
+    var d = { praise: [["Amazing grace, how sweet the sound", "That saved a wretch like me"], ["I once was lost, but now am found", "Was blind, but now I see"], ["'Twas grace that taught my heart to fear,", "And grace my fears relieved"], ["How precious did that grace appear", "The hour I first believed"]], word: [], sample: true };
+    try { var sv = JSON.parse(localStorage.getItem("hsv_wslides") || "null"); if (sv && sv.praise && sv.word) d = sv; } catch (e) { /* storage unavailable */ }
+    return d;
+  })();
+  var tvRedraw = null;
+  function slideBlocks(txt) { return String(txt || "").split(/\n\s*\n/).map(function (b) { return b.split("\n").map(function (l) { return l.trim(); }).filter(Boolean); }).filter(function (a) { return a.length; }); }
+  function curSlide() {
+    if (typeof W === "undefined" || !W || W.file || W.done || screenState.mode !== "live") return null;
+    var it = ORDER[W.idx], arr = it.style === "praise" ? WSL.praise : it.style === "drone" ? WSL.word : null;
+    if (!arr || !arr.length) return null;
+    var per = Math.max(5, Math.min(12, it.dur / arr.length)), k = Math.min(arr.length - 1, Math.floor(elapsed() / per));
+    return { lines: arr[k], k: k, n: arr.length, kind: it.style === "praise" ? "찬양" : "말씀", sample: it.style === "praise" && !!WSL.sample };
+  }
   var DRINKS = [
     { n: "아메리카노", d: "따뜻하게 · 진하게", c: 0x2a1a10 },
     { n: "아이스 아메리카노", d: "얼음 가득", c: 0x3a2414 },
@@ -1299,8 +1316,13 @@ window.addEventListener("error", function (e) {
     else if (st.mode === "file") { c("예배 녹음", serif(84), "#fff", 230); var nm = st.name || ""; if (nm.length > 34) nm = nm.slice(0, 34) + "…"; c(nm, sans(30), "#d6def0", 320); }
     else {
       var it = ORDER[st.idx], hv = !!it.verse;
-      c(it.title, serif(hv ? 80 : 104), "#fff", hv ? 175 : 245); c(it.sub, sans(32), "#d6def0", hv ? 250 : 335);
-      if (hv) {
+      var cs = curSlide();
+      if (cs) {
+        c(cs.kind + (cs.sample ? " · 예시 (공개 저작물)" : "") + "  " + (cs.k + 1) + "/" + cs.n, sans(28), "#f26a1b", 140);
+        var fs = 66; g.font = serif(fs); var mw = 0; cs.lines.forEach(function (ln) { mw = Math.max(mw, g.measureText(ln).width); }); if (mw > 900) fs = Math.max(34, Math.floor(fs * 900 / mw));
+        cs.lines.forEach(function (ln, i) { c(ln, serif(fs), "#fff", 285 + (i - (cs.lines.length - 1) / 2) * fs * 1.4); });
+      } else { c(it.title, serif(hv ? 80 : 104), "#fff", hv ? 175 : 245); c(it.sub, sans(32), "#d6def0", hv ? 250 : 335); }
+      if (hv && !cs) {
         g.font = serif(42); var words = it.verse.split(" "), lines = [], cur = "";
         words.forEach(function (wd) { var t = cur ? cur + " " + wd : wd; if (g.measureText(t).width > 820 && cur) { lines.push(cur); cur = wd; } else cur = t; }); if (cur) lines.push(cur);
         lines.forEach(function (ln, i) { c(ln, serif(42), "#fff4dc", 335 + i * 58); });
@@ -2225,7 +2247,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-2220", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-2224", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -4232,8 +4254,11 @@ window.addEventListener("error", function (e) {
     (function tvs() {
       var slides = [["목포한사랑교회", "주일 예배"], ["예배로 부름", "찬양 · 기도 · 말씀"], ["오늘의 말씀", "함께 읽어요"], ["환영합니다", "새가족을 축복합니다"]], k = 0;
       var cv = document.createElement("canvas"); cv.width = 640; cv.height = 360; var g = cv.getContext("2d"), tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace;
-      function draw() { var gr = g.createLinearGradient(0, 0, 640, 360); gr.addColorStop(0, "#14203d"); gr.addColorStop(1, "#2a4a8a"); g.fillStyle = gr; g.fillRect(0, 0, 640, 360); g.fillStyle = "rgba(255,255,255,.08)"; g.beginPath(); g.arc(560, 60, 140, 0, 6.3); g.fill(); g.textAlign = "center"; g.fillStyle = "#fff"; g.font = '800 58px "IBM Plex Sans KR", sans-serif'; g.fillText(slides[k][0], 320, 170); g.fillStyle = "#d6f03c"; g.font = '600 30px "IBM Plex Sans KR", sans-serif'; g.fillText(slides[k][1], 320, 230); tx.needsUpdate = true; }
-      draw(); setInterval(function () { k = (k + 1) % slides.length; draw(); }, 8000);
+      function draw() { var gr = g.createLinearGradient(0, 0, 640, 360); gr.addColorStop(0, "#14203d"); gr.addColorStop(1, "#2a4a8a"); g.fillStyle = gr; g.fillRect(0, 0, 640, 360); g.fillStyle = "rgba(255,255,255,.08)"; g.beginPath(); g.arc(560, 60, 140, 0, 6.3); g.fill(); g.textAlign = "center"; g.fillStyle = "#fff"; g.font = '800 58px "IBM Plex Sans KR", sans-serif'; var cs = curSlide();
+        if (cs) { g.fillStyle = "#d6f03c"; g.font = '600 20px "IBM Plex Sans KR", sans-serif'; g.fillText(cs.kind + (cs.sample ? " · 예시" : ""), 320, 52); var tf = 36; g.font = '700 ' + tf + 'px "Gowun Batang", serif'; var tw = 0; cs.lines.forEach(function (ln) { tw = Math.max(tw, g.measureText(ln).width); }); if (tw > 570) tf = Math.max(20, Math.floor(tf * 570 / tw)); g.fillStyle = "#fff"; g.font = '700 ' + tf + 'px "Gowun Batang", serif'; cs.lines.forEach(function (ln, i) { g.fillText(ln, 320, 185 + (i - (cs.lines.length - 1) / 2) * tf * 1.4); }); }
+        else { g.fillText(slides[k][0], 320, 170); g.fillStyle = "#d6f03c"; g.font = '600 30px "IBM Plex Sans KR", sans-serif'; g.fillText(slides[k][1], 320, 230); }
+        tx.needsUpdate = true; }
+      tvRedraw = draw; draw(); setInterval(function () { k = (k + 1) % slides.length; draw(); }, 8000);
       var scr = new THREE.MeshBasicMaterial({ map: tx, toneMapped: false }), bez = std(0x0e0f12, { roughness: 0.35, metalness: 0.4 });
       [[Z0 + 1.6, 0.55], [Z1 - 1.6, -0.55]].forEach(function (q) {
         var G = new THREE.Group(); G.position.set(-8.3, Y + ph - 1.75, q[0]); G.rotation.y = -Math.PI / 2 + q[1]; scene.add(G);
@@ -6553,6 +6578,29 @@ window.addEventListener("error", function (e) {
   });
   wPlay.addEventListener("click", playPause); wNext.addEventListener("click", nextSection);
   $("#w-stand").addEventListener("click", function () { exitMode(); });
+  var lyrKey = "";
+  tickers.push(function () { var cs = curSlide(), key = cs ? W.idx + ":" + cs.k : ""; if (key !== lyrKey) { lyrKey = key; if (screenState.mode === "live") setScreen(screenState); if (tvRedraw) tvRedraw(); } });
+  (function slideEditor() {
+    var row = $("#w-file").parentNode.parentNode, b = el("button", "btn", "가사·말씀 입력"); b.type = "button"; row.appendChild(b);
+    var ov = null;
+    function toText(arr) { return arr.map(function (a) { return a.join("\n"); }).join("\n\n"); }
+    function close() { if (ov) { ov.remove(); ov = null; } }
+    function open() {
+      close(); ov = el("div"); ov.style.cssText = "position:fixed;inset:0;z-index:95;background:rgba(8,14,28,.82);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:calc(env(safe-area-inset-top,0px) + 14px) 14px calc(env(safe-area-inset-bottom,0px) + 14px)";
+      var box = el("div"); box.style.cssText = "width:min(560px,100%);background:#f3f6fa;color:#0f1b33;border-radius:16px;padding:16px;display:grid;gap:8px;font:500 14px/1.5 'IBM Plex Sans KR',sans-serif"; ov.appendChild(box);
+      var h = el("strong", null, "예배 화면에 나올 가사와 말씀 요지"); h.style.fontSize = "17px"; box.appendChild(h);
+      box.appendChild(el("div", null, "빈 줄을 넣으면 다음 화면으로 넘어갑니다. 이 기기의 브라우저에만 저장되고 다른 사람에게는 보이지 않습니다. 저작권이 있는 가사는 교회가 이용허락을 받은 곡만 넣어 주세요."));
+      function area(label, val, ph) { var l = el("label", null, label); l.style.cssText = "display:grid;gap:4px;font-weight:700"; var t = document.createElement("textarea"); t.value = val; t.placeholder = ph; t.rows = 9; t.style.cssText = "font:500 16px/1.5 'IBM Plex Sans KR',sans-serif;padding:8px;border:1px solid #cbd3e1;border-radius:10px;resize:vertical;width:100%;box-sizing:border-box"; l.appendChild(t); box.appendChild(l); return t; }
+      var tp = area("찬양 가사", toText(WSL.praise), "첫 화면 첫째 줄\n첫 화면 둘째 줄\n\n다음 화면 첫째 줄\n다음 화면 둘째 줄"), tw = area("말씀 요지 (설교 포인트)", toText(WSL.word), "오늘의 본문\n요한복음 13:34\n\n포인트 1\n서로 사랑하라");
+      var r = el("div"); r.style.cssText = "display:flex;gap:8px;flex-wrap:wrap"; box.appendChild(r);
+      function mk(t, fn, pri) { var x = el("button", "btn" + (pri ? " primary" : ""), t); x.type = "button"; x.addEventListener("click", fn); r.appendChild(x); }
+      mk("저장", function () { WSL = { praise: slideBlocks(tp.value), word: slideBlocks(tw.value), sample: false }; try { localStorage.setItem("hsv_wslides", JSON.stringify(WSL)); } catch (e) { /* ignore */ } lyrKey = "x"; if (screenState.mode === "live") setScreen(screenState); if (tvRedraw) tvRedraw(); toast("저장했어요", "다음 예배 순서부터 화면에 나옵니다."); close(); }, true);
+      mk("예시로 되돌리기", function () { try { localStorage.removeItem("hsv_wslides"); } catch (e) { /* ignore */ } toast("예시로 돌렸어요", "페이지를 새로 열면 적용됩니다."); close(); });
+      mk("닫기", close);
+      document.body.appendChild(ov);
+    }
+    b.addEventListener("click", open);
+  })();
 
   /* ============================================================
      INPUT
