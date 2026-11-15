@@ -2263,13 +2263,13 @@ window.addEventListener("error", function (e) {
      same room API the game already uses (presence / onPeers / emit / on),
      so every multiplayer feature works for anyone with the link.
      ============================================================ */
-  var HSV_SUPA = { url: "https://mdrrthfpdzjqrxfrojwf.supabase.co", key: "", roomSize: 30 };
+  var HSV_SUPA = { url: "https://mdrrthfpdzjqrxfrojwf.supabase.co", key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kcnJ0aGZwZHpqcXJ4ZnJvandmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ1NzAyMTMsImV4cCI6MjExMDE0NjIxM30.2ACNQKsFkF6vuwoPsNH7p3yLZdfucu7uOU9c6lQBIRY", roomSize: 30 };
   var PUBLIC_MODE = /^https:\/\/.+\.supabase\.co/.test(HSV_SUPA.url) && HSV_SUPA.key.length > 20;
   if (PUBLIC_MODE) (function () {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-2236", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-2241", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
