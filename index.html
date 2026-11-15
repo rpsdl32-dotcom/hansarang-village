@@ -2225,7 +2225,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-2212", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-2220", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -6736,7 +6736,7 @@ window.addEventListener("error", function (e) {
     [["day", "낮"], ["dusk", "노을"], ["night", "밤"]].forEach(function (t) { mbtn(r2, t[1], function () { document.getElementById("t-" + t[0]).click(); buildMenu(); }, curTod === t[0]); });
     mbtn(r2, "눈", function () { document.getElementById("btn-snow").click(); buildMenu(); }, snowing);
     var r3 = el("div", "mrow"); menu.appendChild(r3);
-    mbtn(r3, "계절 · " + (document.getElementById("btn-season").textContent || ""), click("btn-season")); mbtn(r3, "음악", click("btn-bgm")); mbtn(r3, "접속 현황", click("btn-net")); mbtn(r3, "그래픽", function () { toggleMenu(false); openPanel("gfx"); }); mbtn(r3, "GLB 시험", function () { toggleMenu(false); openPanel("glb"); }); mbtn(r3, "퀘스트 · 패스", function () { toggleMenu(false); openPanel("quest"); }); mbtn(r3, "스타렉스 타기", function () { toggleMenu(false); if (mode) return; VAN.x = -18; VAN.z = 25.85; VAN.h = -Math.PI / 2; VAN.v = 0; vanPose(0); fadeTo(function () { enterVan(); }); });
+    mbtn(r3, "계절 · " + (document.getElementById("btn-season").textContent || ""), click("btn-season")); mbtn(r3, "음악", click("btn-bgm")); mbtn(r3, "접속 현황", click("btn-net")); if (coarse && navigator.vibrate) mbtn(r3, "진동", function () { var o = window.__haptic && window.__haptic(localStorage.getItem("hsv_haptic") === "0"); toast("진동", o ? "켰어요." : "껐어요."); }); mbtn(r3, "그래픽", function () { toggleMenu(false); openPanel("gfx"); }); mbtn(r3, "GLB 시험", function () { toggleMenu(false); openPanel("glb"); }); mbtn(r3, "퀘스트 · 패스", function () { toggleMenu(false); openPanel("quest"); }); mbtn(r3, "스타렉스 타기", function () { toggleMenu(false); if (mode) return; VAN.x = -18; VAN.z = 25.85; VAN.h = -Math.PI / 2; VAN.v = 0; vanPose(0); fadeTo(function () { enterVan(); }); });
     menu.appendChild(el("div", "msec", "이동과 정보"));
     DEST.filter(function (d) { return d.n.charAt(0) !== "T"; }).forEach(function (d) { var b = el("button", "menu-item"); b.type = "button"; b.appendChild(el("span", null, d.n)); b.appendChild(el("small", null, "이동")); b.addEventListener("click", function () { toggleMenu(false); teleport(d); }); menu.appendChild(b); });
     [["오늘의 퀘스트 · 출석", "daily"], ["새가족 안내", "guide"], ["사진 앨범", "album"]].forEach(function (m) { var b = el("button", "menu-item", m[0]); b.type = "button"; b.addEventListener("click", function () { toggleMenu(false); openPanel(m[1]); }); menu.appendChild(b); });
@@ -7179,6 +7179,16 @@ window.addEventListener("error", function (e) {
   $("#go-tour").addEventListener("click", function () { enterWorld("tour"); });
   $("#go-friends").addEventListener("click", function () { started || enterWorld("go"); setTimeout(function () { openPanel("friends"); }, 350); });
   setTimeout(function () { try { go.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 50);
+
+  /* ===== phone haptics: short vibration on game events (Android; iOS ignores it). Menu -> 진동 toggles it. ===== */
+  (function () {
+    if (!coarse || !navigator.vibrate) return;
+    var HAP = { coin: 12, mission: [18, 40, 18], treasure: [14, 30, 14, 30, 24], levelup: [20, 40, 20, 40, 40], goal: 45, fail: [50, 40, 50], horn: 20, door: 10 };
+    var on = true; try { on = localStorage.getItem("hsv_haptic") !== "0"; } catch (e) { /* storage unavailable */ }
+    var sp = SFX.play;
+    SFX.play = function (name) { try { if (on && HAP[name]) navigator.vibrate(HAP[name]); } catch (e) { /* ignore */ } return sp.apply(this, arguments); };
+    window.__haptic = function (v) { on = !!v; try { localStorage.setItem("hsv_haptic", on ? "1" : "0"); } catch (e) { /* ignore */ } if (on) navigator.vibrate(30); return on; };
+  })();
 
   /* ============================================================
      SAMHAK-RO STAR RUN — drive the van along Samhak-ro and collect
