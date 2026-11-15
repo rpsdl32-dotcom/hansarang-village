@@ -1199,6 +1199,20 @@ window.addEventListener("error", function (e) {
     doors.push(d); return d;
   }
   slidingDoor(11.6, AX.z1 - 0.18, 2.0);
+  // Blender entrance (canopy with gold fascia, slim columns, downlights, granite steps, handrails) + 3D tower crosses
+  (function churchGLB() {
+    if (!THREE.GLTFLoader || location.protocol === "file:") return;
+    var oldEnt = scene.children.filter(function (o) { return o.isMesh && o.material === M.gold && Math.abs(o.position.x - 11.6) < 0.1 && o.position.z > -6.5 && o.position.z < -5.3; });
+    try { new THREE.GLTFLoader().load(ASSET("entrance.glb?v=2"), function (gl) { gl.scene.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); gl.scene.position.set(11.6, 0, AX.z1 - 0.05); scene.add(gl.scene); oldEnt.forEach(function (m) { m.visible = false; }); }); } catch (e) { /* keep old canopy */ }
+    try { new THREE.GLTFLoader().load(ASSET("cross.glb?v=1"), function (gl) {
+      var crossM = null; gl.scene.traverse(function (o) { if (o.isMesh) { o.castShadow = true; if (/ch_cross$/.test(o.material.name)) { o.material.emissive = new THREE.Color(0xfff1d0); crossM = o.material; } } });
+      var a = gl.scene, b = gl.scene.clone(true);
+      a.position.set(6.8, 20.1, TW.z1); scene.add(a);
+      b.position.set(TW.x0, 20.1, -8.2); b.rotation.y = -Math.PI / 2; scene.add(b);
+      scene.children.forEach(function (o) { if (o.isMesh && o.material === M_crossGlass) o.visible = false; });
+      if (crossM) EMISSIVE_NIGHT.push(crossM);
+    }); } catch (e) { /* keep reliefs */ }
+  })();
 
   // mint shed
   box(-15.9, 1.25, -8.7, 2.6, 2.5, 2.6, M.mint, { occ: true, col: true });
@@ -2173,7 +2187,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-1117", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-1130", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -2528,7 +2542,7 @@ window.addEventListener("error", function (e) {
     board(12.4, 75, -Math.PI / 2, 8, 5.7, [-2.6, 2.6]);   // main: behind the east goal, above the score board (seen in the shoot-out)
     board(-24.6, 75, -Math.PI / 2, 3.2, 1.2, [-1.0, 1.0]); // second: outside the west terrace, facing people walking up
     var vid = document.createElement("video"); vid.muted = true; vid.loop = false; vid.playsInline = true; vid.setAttribute("playsinline", ""); vid.setAttribute("webkit-playsinline", ""); vid.crossOrigin = "anonymous"; vid.preload = "metadata";
-    var imgs = {}, poster = new Image(); poster.crossOrigin = "anonymous"; poster.src = ASSET(OLSC_BOARD_CONFIG.poster);
+    var imgs = {}, poster = new Image(); poster.crossOrigin = "anonymous"; poster.src = ASSET(OLSC_BOARD_CONFIG.poster); poster.onload = function () { setTimeout(function () { if (!st.active) draw(performance.now()); }, 0); };
     var st = { i: -1, t0: 0, loading: false, failed: false, sound: false, active: false, last: 0, item: null };
     var PL = OLSC_BOARD_CONFIG.playlist;
     function img(src) { if (!imgs[src]) { var im = new Image(); im.crossOrigin = "anonymous"; im.src = ASSET(src); imgs[src] = im; } return imgs[src]; }
@@ -3994,12 +4008,16 @@ window.addEventListener("error", function (e) {
     function block(x0, x1, z0, z1, h, mat, tile) { var y = Math.min(groundH(x0, z0), groundH(x1, z0), groundH(x0, z1), groundH(x1, z1)) - 0.3; var m = box((x0 + x1) / 2, y + h / 2, (z0 + z1) / 2, x1 - x0, h, z1 - z0, mat, { occ: true, col: true }); return y; }
     // 1) white 5-storey grocery mart, west side by the junction
     var martM = std(0xffffff, { map: winT, roughness: 0.75 }); martM.map = winT.clone(); martM.map.wrapS = martM.map.wrapT = THREE.RepeatWrapping; martM.map.repeat.set(5, 5); martM.map.needsUpdate = true;
-    var my = block(-127, -112, 30, 46, 17, martM);
-    plane(10, 1.6, std(0xffffff, { map: textTex(1024, 160, "#ffffff", "#1f3fa8", ["식자재마트"], 120) }), -119.5, my + 18.2, 29.9, { rx: 0, ry: Math.PI });
-    box(-119.5, my + 18.2, 30.1, 10.4, 1.9, 0.2, M.metal, { cast: false });
-    plane(1.4, 7, std(0xffffff, { map: textTex(140, 700, "#ffffff", "#1f3fa8", ["식", "자", "재", "마", "트"], 100) }), -111.9, my + 11, 33, { rx: 0, ry: Math.PI / 2 });
-    box(-119.5, my + 1.6, 29.6, 15.4, 3.2, 0.4, std(0x9b4a2a, { roughness: 0.7 }), { cast: false });
-    plane(14, 1.0, std(0xffffff, { map: textTex(1024, 72, "#d23a2a", "#ffffff", ["마트 · 주차장 입구"], 54) }), -119.5, my + 3.6, 29.35, { rx: 0, ry: Math.PI });
+    var my = Math.min(groundH(-127, 30), groundH(-112, 30), groundH(-127, 46), groundH(-112, 46)) - 0.3;
+    var martBox = box(-119.5, my + 8.5, 38, 15, 17, 16, martM, { occ: true, col: true });
+    var signF = std(0xffffff, { map: textTex(1024, 160, "#ffffff", "#1f3fa8", ["식자재마트"], 120) }), signV = std(0xffffff, { map: textTex(140, 700, "#ffffff", "#1f3fa8", ["식", "자", "재", "마", "트"], 100) });
+    plane(10, 1.9, signF, -112.5, my + 18.85, 38, { rx: 0, ry: Math.PI / 2 });
+    plane(1.4, 7, signV, -113.2, my + 11, 29.85, { rx: 0, ry: Math.PI });
+    plane(13, 0.8, std(0xffffff, { map: textTex(1024, 64, "#d23a2a", "#ffffff", ["마트 · 주차장 입구"], 48) }), -111.4, my + 3.62, 38, { rx: 0, ry: Math.PI / 2 });
+    if (THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load(ASSET("mart.glb?v=1"), function (gl) { // Blender: 5-storey mart with framed windows, cornices, awning, roof sign truss
+      gl.scene.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      gl.scene.position.set(-119.5, my, 38); gl.scene.rotation.y = Math.PI / 2; scene.add(gl.scene); martBox.visible = false;
+    }); } catch (e) { /* keep box */ }
     // 2) low beige wall-front shops (left foreground of the photo)
     block(-126, -111, -6, 22, 4.2, std(0xe9dcbd, { map: T.stucco, roughness: 0.9 }));
     // 3) right side: 3-storey commercial + two apartment slabs (north of the bowling alley, clear of its lot)
@@ -4145,6 +4163,22 @@ window.addEventListener("error", function (e) {
     for (var tz = cz - 3.8; tz <= cz + 3.8; tz += 1.27) { var tl = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.24, 10), M_whiteP); tl.position.set(-10.55, Y + ph - 0.78, tz); tl.rotation.z = -0.8; scene.add(tl); }
     [[-8.6, Z0 + 3.6], [-8.6, Z1 - 3.6]].forEach(function (p) { box(p[0], Y + ph - 0.02, p[1], 0.9, 0.04, 0.9, std(0xeeeeee), { cast: false }); box(p[0], Y + ph - 0.05, p[1], 0.5, 0.02, 0.5, std(0x9a9a9a), { cast: false }); });
     var plA = new THREE.PointLight(0xfff3e2, 0.9, 16, 1.6); plA.position.set(-3, Y + ph - 0.8, cz); scene.add(plA);
+    // ceiling-hung TVs either side of the stage + ceiling projector (TV content: church name / service order, no fake video)
+    (function tvs() {
+      var slides = [["목포한사랑교회", "주일 예배"], ["예배로 부름", "찬양 · 기도 · 말씀"], ["오늘의 말씀", "함께 읽어요"], ["환영합니다", "새가족을 축복합니다"]], k = 0;
+      var cv = document.createElement("canvas"); cv.width = 640; cv.height = 360; var g = cv.getContext("2d"), tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace;
+      function draw() { var gr = g.createLinearGradient(0, 0, 640, 360); gr.addColorStop(0, "#14203d"); gr.addColorStop(1, "#2a4a8a"); g.fillStyle = gr; g.fillRect(0, 0, 640, 360); g.fillStyle = "rgba(255,255,255,.08)"; g.beginPath(); g.arc(560, 60, 140, 0, 6.3); g.fill(); g.textAlign = "center"; g.fillStyle = "#fff"; g.font = '800 58px "IBM Plex Sans KR", sans-serif'; g.fillText(slides[k][0], 320, 170); g.fillStyle = "#d6f03c"; g.font = '600 30px "IBM Plex Sans KR", sans-serif'; g.fillText(slides[k][1], 320, 230); tx.needsUpdate = true; }
+      draw(); setInterval(function () { k = (k + 1) % slides.length; draw(); }, 8000);
+      var scr = new THREE.MeshBasicMaterial({ map: tx, toneMapped: false }), bez = std(0x0e0f12, { roughness: 0.35, metalness: 0.4 });
+      [[Z0 + 1.6, 0.55], [Z1 - 1.6, -0.55]].forEach(function (q) {
+        var G = new THREE.Group(); G.position.set(-8.3, Y + ph - 1.75, q[0]); G.rotation.y = -Math.PI / 2 + q[1]; scene.add(G);
+        var b = new THREE.Mesh(new THREE.BoxGeometry(2.3, 1.36, 0.09), bez); G.add(b);
+        var sc = new THREE.Mesh(new THREE.PlaneGeometry(2.18, 1.24), scr); sc.position.z = 0.05; G.add(sc);
+        [-0.6, 0.6].forEach(function (x) { var rod = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.1, 6), M_whiteP); rod.position.set(x, 1.2, -0.03); G.add(rod); });
+      });
+      box(-2.2, Y + ph - 0.42, cz, 0.55, 0.22, 0.45, M_whiteP, { cast: false }); var lens = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.06, 14), M_blk); lens.rotation.z = Math.PI / 2; lens.position.set(-2.5, Y + ph - 0.42, cz); scene.add(lens);
+      box(-2.2, Y + ph - 0.2, cz, 0.05, 0.25, 0.05, M_whiteP, { cast: false });
+    })();
     // ---- walls: wood wainscot, fabric upper, rails, pillars, blinds windows
     [[Z1 - 0.02, Math.PI], [Z0 + 0.02, 0]].forEach(function (w) {
       plane(L, ph, M_fabric, cx, Y + ph / 2, w[0], { rx: 0, ry: w[1], tile: 3 });
