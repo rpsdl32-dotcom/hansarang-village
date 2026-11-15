@@ -2129,6 +2129,10 @@ window.addEventListener("error", function (e) {
     if (hs === "bob") [-1, 1].forEach(function (s) { add(hg("c_bob", function () { var c = new THREE.SphereGeometry(0.12, 12, 10); c.scale(0.7, 1.4, 0.9); return c; }), hairM, s * 0.24, -0.08, -0.04, hd); });
     if (hs === "pony") { add(hg("c_pony", function () { var c = new THREE.SphereGeometry(0.1, 12, 10); c.scale(0.8, 1.5, 0.8); return c; }), hairM, 0, -0.02, -0.33, hd).rotation.x = 0.4; add(hg("c_tie", function () { return new THREE.TorusGeometry(0.05, 0.016, 6, 12); }), soft(0xe0505a, 0.5), 0, 0.1, -0.29, hd); }
     if (hs === "curly") for (var c = 0; c < 12; c++) { var an = c / 12 * 6.283; add(hg("c_curl", function () { return new THREE.SphereGeometry(0.085, 10, 8); }), hairM, Math.cos(an) * 0.24, 0.12 + (c % 2) * 0.06, Math.sin(an) * 0.24 - 0.02, hd); }
+    if (hs === "long") [-1, 1].forEach(function (sd) { add(hg("c_long", function () { var c = new THREE.SphereGeometry(0.13, 12, 10); c.scale(0.75, 2.0, 0.9); return c; }), hairM, sd * 0.23, -0.2, -0.06, hd); });
+    if (hs === "long") add(hg("c_longB", function () { var c = new THREE.SphereGeometry(0.24, 14, 10); c.scale(1.1, 1.5, 0.5); return c; }), hairM, 0, -0.2, -0.2, hd);
+    if (hs === "bun") { add(hg("c_bun", function () { return new THREE.SphereGeometry(0.11, 14, 10); }), hairM, 0, 0.3, -0.12, hd); add(hg("c_bunT", function () { return new THREE.TorusGeometry(0.07, 0.02, 6, 14); }), soft(0xf26a1b, 0.6), 0, 0.24, -0.1, hd).rotation.x = 1.2; }
+    if (hs === "spiky") for (var sp = 0; sp < 9; sp++) { var sa = sp / 9 * 6.283; var cone = add(hg("c_spike", function () { return new THREE.ConeGeometry(0.06, 0.18, 6); }), hairM, Math.cos(sa) * 0.15, 0.28, Math.sin(sa) * 0.15 - 0.02, hd); cone.rotation.set(Math.sin(sa) * 0.6, 0, -Math.cos(sa) * 0.6); }
     // accessories fitted to the big head
     var acc = o.acc || "none", dk = soft(0x15171a, 0.3), gd = std(0xe9b93a, { roughness: 0.35, metalness: 0.6 });
     if (acc === "glasses") { [-0.075, 0.075].forEach(function (x) { add(hg("c_lens", function () { return new THREE.TorusGeometry(0.05, 0.008, 6, 18); }), dk, x, 0.0, 0.27, hd); }); }
@@ -2136,6 +2140,11 @@ window.addEventListener("error", function (e) {
     if (acc === "cap" || acc === "none" && o.hat) { add(hg("c_hat", function () { return new THREE.CylinderGeometry(0.5, 0.5, 0.03, 28); }), soft(0xe8d29a, 0.8), 0, 0.17, 0, hd); var crown = add(hg("c_hatc", function () { var s = new THREE.SphereGeometry(0.25, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2); s.scale(1, 0.85, 1); return s; }), soft(0xe8d29a, 0.8), 0, 0.17, 0, hd); add(hg("c_band", function () { return new THREE.CylinderGeometry(0.252, 0.252, 0.05, 24, 1, true); }), soft(0x6a3a20, 0.6), 0, 0.2, 0, hd); }
     if (acc === "crown") { add(hg("c_crown", function () { return new THREE.CylinderGeometry(0.14, 0.13, 0.08, 14, 1, true); }), gd, 0, 0.33, 0, hd); }
     if (acc === "cape") { var cp = add(hg("c_cape", function () { return new THREE.BoxGeometry(0.34, 0.45, 0.02); }), soft(0xc8323a, 0.7), 0, 0.52, -0.17); cp.rotation.x = 0.12; }
+    if (acc === "beanie") { var bn = add(hg("c_beanie", function () { var s = new THREE.SphereGeometry(0.315, 24, 14, 0, Math.PI * 2, 0, Math.PI * 0.52); s.scale(1, 0.95, 1); return s; }), soft(0x2f4f8a, 0.9), 0, 0.05, -0.01, hd); bn.rotation.x = -0.15; add(hg("c_beanieR", function () { return new THREE.TorusGeometry(0.29, 0.035, 8, 26); }), soft(0x24406f, 0.9), 0, 0.06, 0, hd).rotation.x = Math.PI / 2 - 0.15; add(hg("c_pom", function () { return new THREE.SphereGeometry(0.07, 10, 8); }), soft(0xf4efe2, 0.9), 0, 0.36, -0.04, hd); }
+    if (acc === "headphones") { var hb = add(hg("c_hpband", function () { return new THREE.TorusGeometry(0.31, 0.025, 8, 28, Math.PI); }), dk, 0, 0.0, 0, hd); [-1, 1].forEach(function (sd) { add(hg("c_hpcup", function () { var c = new THREE.CylinderGeometry(0.085, 0.085, 0.06, 18); c.rotateZ(Math.PI / 2); return c; }), soft(0xf26a1b, 0.5), sd * 0.31, -0.02, 0, hd); }); }
+    if (acc === "headband") { add(hg("c_hband", function () { return new THREE.TorusGeometry(0.3, 0.028, 8, 28); }), soft(0x1f4fd8, 0.7), 0, 0.1, 0, hd).rotation.x = Math.PI / 2 - 0.2; add(hg("c_hbandL", function () { return new THREE.BoxGeometry(0.12, 0.035, 0.02); }), soft(0xd6f03c, 0.6), 0, 0.12, 0.29, hd); }
+    if (acc === "scarf") { add(hg("c_scarf", function () { return new THREE.TorusGeometry(0.15, 0.05, 10, 22); }), soft(0xc8323a, 0.9), 0, 0.74, 0).rotation.x = Math.PI / 2; add(hg("c_scarfT", function () { return new THREE.BoxGeometry(0.08, 0.2, 0.04); }), soft(0xc8323a, 0.9), 0.06, 0.62, 0.15); }
+    if (acc === "crossbag") { var st2 = add(hg("c_strap", function () { return new THREE.BoxGeometry(0.03, 0.5, 0.2); }), soft(0x3a2a1e, 0.6), 0, 0.55, 0.0); st2.rotation.z = 0.7; add(hg("c_xbag", function () { return new THREE.BoxGeometry(0.16, 0.12, 0.06); }), soft(0x8a5a32, 0.6), 0.13, 0.4, 0.13); }
     if (comic) hd.scale.set(1.25, 1.25, 1.25);
     var drive = function () {
       var kf = function (lx) { return lx < -0.9 ? -lx : 0.08 + Math.max(0, lx) * 1.1 + Math.max(0, -lx) * 0.2; };
@@ -2194,7 +2203,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-1653", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-1707", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -3104,7 +3113,7 @@ window.addEventListener("error", function (e) {
           b.addEventListener("click", function () { G.av[key] = o[0]; saveG(); rebuildAvatar(); reopen("avatar"); }); row.appendChild(b);
         });
       }
-      group("머리 모양", "hair", [["short", "짧은 머리"], ["bob", "단발"], ["pony", "묶은 머리"], ["curly", "곱슬"]]);
+      group("머리 모양", "hair", [["short", "짧은 머리"], ["bob", "단발"], ["pony", "묶은 머리"], ["curly", "곱슬"], ["long", "긴 머리"], ["bun", "똥머리"], ["spiky", "삐죽 머리"]]);
       var hairs = [[0x221a14, "검정"], [0x5a3a22, "갈색"], [0xc9a24a, "금발"], [0x8a8a8a, "회색"]]; if (G.owned.indexOf("pinkhair") >= 0) hairs.push([0xf08ab0, "분홍"]);
       group("머리 색", "hairCol", hairs, true);
       group("표정", "face", [["smile", "방긋"], ["wink", "윙크"], ["wow", "깜짝"], ["cool", "시크"]]);
@@ -3114,7 +3123,7 @@ window.addEventListener("error", function (e) {
       group("윗옷 종류", "top", [["tee", "티셔츠"], ["shirt", "셔츠"], ["hoodie", "후드티"], ["jersey", "OLSC 저지"], ["knit", "니트"], ["puffer", "패딩"], ["blazer", "재킷"], ["cardigan", "가디건"], ["dress", "원피스"], ["overall", "멜빵바지"]]);
       group("신발", "shoes", [[0xf2f2f0, "흰 운동화"], [0x1c1c1c, "검정"], [0x6a4a30, "갈색 구두"], [0xc8323a, "빨강"], [0x2f6fd6, "파랑"]], true);
       group("바지", "pants", [[0x1b2336, "남색"], [0x3a3f4f, "회색"], [0x6a4a30, "갈색"], [0xf3f6fa, "하양"], [0x2a5a8a, "청바지"]], true);
-      var accs = [["none", "없음"], ["glasses", "안경"], ["cap", "모자"], ["backpack", "가방"]];
+      var accs = [["none", "없음"], ["glasses", "안경"], ["cap", "모자"], ["backpack", "가방"], ["beanie", "비니"], ["headphones", "헤드폰"], ["scarf", "목도리"], ["crossbag", "크로스백"], ["headband", "OLSC 헤어밴드"]];
       SHOP.forEach(function (it) { if (it.k === "acc" && G.owned.indexOf(it.id) >= 0) accs.push([it.id, it.n]); });
       group("액세서리", "acc", accs);
       pEl("p", "p-sum", "왕관, 망토 같은 특별한 아이템은 미션 포인트로 상점에서 살 수 있어요.");
@@ -3220,7 +3229,7 @@ window.addEventListener("error", function (e) {
      and the button says so.
      ============================================================ */
   var NET = { room: null, on: false, state: "wait", peers: {}, sayN: 0, st: "", sr: false, lastSay: 0, near: false, blocked: {}, sendT: 0, last: "", t0: 0, unread: 0, warned: false };
-  var TOPS = ["tee", "shirt", "hoodie", "jersey", "knit", "puffer", "blazer", "cardigan", "dress", "overall"], HAIRS = ["short", "bob", "pony", "curly"], FACES = ["smile", "wink", "wow", "cool"], ACCS = ["none", "glasses", "cap", "backpack", "shades", "cape", "crown"];
+  var TOPS = ["tee", "shirt", "hoodie", "jersey", "knit", "puffer", "blazer", "cardigan", "dress", "overall"], HAIRS = ["short", "bob", "pony", "curly", "long", "bun", "spiky"], FACES = ["smile", "wink", "wow", "cool"], ACCS = ["none", "glasses", "cap", "backpack", "shades", "cape", "crown", "beanie", "headphones", "scarf", "crossbag", "headband"];
   function num(v, a, b, d) { v = Number(v); return isFinite(v) ? clamp(v, a, b) : d; }
   function cleanText(s, n) { return String(s == null ? "" : s).replace(/[\u0000-\u001f\u007f​-‏‪-‮⁦-⁩]/g, "").slice(0, n); }
   function cleanAv(a) {
