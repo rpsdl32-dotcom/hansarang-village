@@ -2291,7 +2291,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-2244", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-2248", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -7331,6 +7331,54 @@ window.addEventListener("error", function (e) {
     var sp = SFX.play;
     SFX.play = function (name) { try { if (on && HAP[name]) navigator.vibrate(HAP[name]); } catch (e) { /* ignore */ } return sp.apply(this, arguments); };
     window.__haptic = function (v) { on = !!v; try { localStorage.setItem("hsv_haptic", on ? "1" : "0"); } catch (e) { /* ignore */ } if (on) navigator.vibrate(30); return on; };
+  })();
+
+  /* ============================================================
+     GUIDE ("길잡이"): tap the button to get an on-screen arrow + distance to
+     today's unfinished quest places (then treasures). Tap again for the next
+     target; the last tap turns it off. Mobile-friendly: no map reading needed.
+     ============================================================ */
+  (function guide() {
+    var QSPOT = { drink: [-26.6, -5.2, "카페 주문대"], self: [-22.25, -5.2, "셀프바"], goal: [-2.4, 75, "승부차기"], dribble: [-18.4, 75, "드리블 챌린지"], rally: [19.6, -15.0, "탁구장"], pray: [-2.85, -14.3, "본당 자리"], drive: [-11.5, 7.6, "스타렉스"], park: [-11.5, 7.6, "스타렉스"], star: [-100, -6, "삼학로 입구"] };
+    var side = $("#side"); if (!side) return;
+    var row = el("div", "row"), gb = el("button", "btn", "길잡이"); gb.id = "btn-guide"; gb.type = "button"; row.appendChild(gb); side.appendChild(row);
+    var pin = document.createElement("div");
+    pin.style.cssText = "position:fixed;left:0;top:0;z-index:25;pointer-events:none;display:none;transform:translate(-50%,-50%);text-align:center;color:#fff;font:700 13px 'IBM Plex Sans KR',system-ui,sans-serif;text-shadow:0 1px 4px rgba(0,0,0,.7)";
+    var ico = document.createElement("div"); ico.style.cssText = "font-size:30px;line-height:1;color:#ffd23f;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))"; var lab = document.createElement("div"); lab.style.cssText = "padding:2px 9px;border-radius:12px;background:rgba(20,24,32,.78);margin-top:2px;white-space:nowrap";
+    pin.appendChild(ico); pin.appendChild(lab); document.body.appendChild(pin);
+    var G2 = { list: [], i: -1, cur: null };
+    function pl() { return mode === "drive" && typeof VAN !== "undefined" ? [VAN.x, VAN.z] : [player.x, player.z]; }
+    function build() {
+      var out = [], seen = {}, d = (G.meta && G.meta.daily) || [];
+      d.forEach(function (q) { if (q.done || !QSPOT[q.id]) return; var t = QSPOT[q.id], key = t[0] + "," + t[1]; if (seen[key]) return; seen[key] = 1; out.push({ x: t[0], z: t[1], n: t[2] + " · " + ((typeof QPOOL !== "undefined" && QPOOL[q.id]) ? QPOOL[q.id].t : "퀘스트") }); });
+      var p = pl(), best = null; TRE.forEach(function (t, i) { if (G.tre.indexOf(i) >= 0) return; var dd = Math.hypot(t[0] - p[0], t[1] - p[1]); if (!best || dd < best.d) best = { d: dd, x: t[0], z: t[1], n: "숨은 보물" }; });
+      if (best) out.push(best);
+      out.push({ x: -11.2, z: 32.2, n: "오늘의 말씀" });
+      return out;
+    }
+    gb.addEventListener("click", function () {
+      if (G2.i < 0 || !G2.list.length) { G2.list = build(); G2.i = -1; }
+      G2.i++; if (G2.i >= G2.list.length) { G2.i = -1; G2.cur = null; gb.textContent = "길잡이"; toast("길잡이 끔", "다시 누르면 목표를 알려 줘요."); return; }
+      G2.cur = G2.list[G2.i]; gb.textContent = "길잡이 " + (G2.i + 1) + "/" + G2.list.length; toast("길잡이", G2.cur.n + " 쪽으로 안내해요. 다시 누르면 다음 목표예요.");
+    });
+    var v3 = new THREE.Vector3();
+    function guideTick() {
+      if (!G2.cur || !started || mode === "worship" || panelOpen) { pin.style.display = "none"; return; }
+      var p = pl(), dx = G2.cur.x - p[0], dz = G2.cur.z - p[1], dist = Math.hypot(dx, dz);
+      if (dist < 3 && mode !== "drive") { toast("도착!", G2.cur.n); G2.cur = null; G2.i = -1; gb.textContent = "길잡이"; pin.style.display = "none"; return; }
+      var gy = groundH(G2.cur.x, G2.cur.z) + 2.4; v3.set(G2.cur.x, gy, G2.cur.z).project(camera);
+      var sx = v3.x, sy = v3.y, behind = v3.z > 1; if (behind) { sx = -sx; sy = -sy; }
+      var on = !behind && Math.abs(sx) < 0.9 && Math.abs(sy) < 0.8;
+      if (!on) { var k = Math.max(Math.abs(sx) / 0.88, Math.abs(sy) / 0.76, 0.0001); sx /= k; sy /= k; }
+      var W2 = window.innerWidth, H2 = window.innerHeight;
+      ico.textContent = on ? "▼" : "➤"; ico.style.transform = on ? "none" : "rotate(" + Math.atan2(-sy, sx).toFixed(3) + "rad)";
+      lab.textContent = G2.cur.n + " · " + Math.round(dist) + "m"; pin.style.display = "block";
+      var pw = pin.offsetWidth || 160, px = (sx * 0.5 + 0.5) * W2, py = (-sy * 0.5 + 0.5) * H2;
+      px = Math.max(pw / 2 + 8, Math.min(W2 - pw / 2 - 8, px)); py = Math.max(72, Math.min(H2 - 170, py)); // keep clear of the top HUD, the joystick and the action button
+      pin.style.left = px.toFixed(0) + "px"; pin.style.top = py.toFixed(0) + "px";
+    }
+    tickers.push(guideTick);
+    if (/[?&]diag=hansarang\b/.test(location.search)) window.__guide = { G2: G2, tick: guideTick, pin: pin, btn: gb };
   })();
 
   /* ============================================================
