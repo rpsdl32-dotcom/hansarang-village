@@ -2291,7 +2291,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-2248", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-2301", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -2870,7 +2870,7 @@ window.addEventListener("error", function (e) {
     ui.innerHTML = '<div class="fp-top"><span id="fp-score"></span><button type="button" id="fp-exit">나가기</button></div>' +
       '<div id="fp-msg"></div><div id="fp-ret"></div>' +
       '<div class="fp-bot" id="fp-kick"><div class="fp-curve"><button type="button" data-c="-1">↶ 감아차기</button><button type="button" data-c="0">직선</button><button type="button" data-c="1">감아차기 ↷</button></div>' +
-      '<div class="fp-gauge"><i id="fp-pow"></i></div><button type="button" class="fp-shoot" id="fp-shoot">꾹 눌러 힘 모으기 · 떼면 슛</button><div class="fp-hint">화면을 드래그해서 조준 · PC: 마우스 드래그 / 방향키 · Space</div></div>' +
+      '<div class="fp-gauge"><i id="fp-pow"></i></div><button type="button" class="fp-shoot" id="fp-shoot">꾹 눌러 힘 모으기 · 떼면 슛</button><div class="fp-hint">화면을 위로 휙 튕기면 바로 슛! 손가락이 향한 곳으로 날아가고, 빠를수록 세게, 휘어 그리면 감겨 들어가요 · 천천히 끌면 조준만 · 아래 버튼으로 꾹 눌러 차도 돼요</div></div>' +
       '<div class="fp-bot" id="fp-keep" hidden><div class="fp-grid"><button data-k="-1,1">↖</button><button data-k="0,1">↑</button><button data-k="1,1">↗</button><button data-k="-1,0">↙</button><button data-k="0,0">●</button><button data-k="1,0">↘</button></div><div class="fp-hint">키커가 차는 순간에 맞춰 방향을 누르세요 · PC: Q W E / A S D</div></div>' +
       '<div id="fp-menu"><h3>OLSC 승부차기</h3><p>1인칭으로 직접 차고, 직접 막아요.</p><button type="button" data-m="kick">키커 플레이 (5번 슛)</button><button type="button" data-m="keep">골키퍼 플레이 (5번 방어)</button><button type="button" data-m="match">승부차기 대결 (키커·골키퍼 교대, 서든데스)</button><p class="fp-note">친구와 1대1 · 관전은 실시간 동기화를 검증한 뒤에 열어요.</p><button type="button" data-m="close" class="ghost">닫기</button></div>' +
       '<div id="fp-end" hidden><h3 id="fp-endt"></h3><p id="fp-ends"></p><button type="button" id="fp-again">다시 하기</button><button type="button" id="fp-back" class="ghost">마을로 돌아가기</button></div>';
@@ -2889,13 +2889,15 @@ window.addEventListener("error", function (e) {
     document.head.appendChild(css);
     var $u = function (id) { return document.getElementById(id); };
     function flash(t, ms) { var m = $u("fp-msg"); m.textContent = t; m.style.opacity = "1"; clearTimeout(flash.h); flash.h = setTimeout(function () { m.style.opacity = "0"; }, ms || 1400); }
+    function icons(arr, good, bad, n) { var o = ""; for (var i = 0; i < Math.max(n, arr.length); i++) o += i < arr.length ? (arr[i] ? good : bad) : "·"; return o; }
     function scoreText() {
-      if (S.kind === "kick") return "슛 " + S.me.length + "/5 · 골 " + S.me.filter(Boolean).length + (S.best ? " · 최고 " + S.best : "");
-      if (S.kind === "keep") return "방어 " + S.ai.length + "/5 · 선방 " + S.ai.filter(function (g) { return !g; }).length;
-      var m = S.me.filter(Boolean).length, a = S.ai.filter(Boolean).length; return "나 " + m + " : " + a + " 상대 · " + (Math.max(S.me.length, S.ai.length) > 5 ? "서든데스" : (S.round + 1) + "라운드");
+      if (S.kind === "kick") return icons(S.me, "⚽", "✖", 5) + " · 골 " + S.me.filter(Boolean).length + (S.streak > 1 ? " · 🔥" + S.streak : "") + (S.best ? " · 최고 " + S.best : "");
+      if (S.kind === "keep") return icons(S.ai.map(function (g) { return !g; }), "🧤", "⚽", 5) + " · 선방 " + S.ai.filter(function (g) { return !g; }).length;
+      var m = S.me.filter(Boolean).length, a = S.ai.filter(Boolean).length; return "나 " + icons(S.me, "⚽", "✖", 5) + "  " + m + " : " + a + "  " + icons(S.ai, "⚽", "✖", 5) + " 상대" + (Math.max(S.me.length, S.ai.length) > 5 ? " · 서든데스" : "");
     }
     function setScore() { $u("fp-score").textContent = scoreText(); }
 
+    if (/[?&]diag=hansarang\b/.test(location.search)) window.__fpk = { S: S, get open() { return open; }, get start() { return start; } };
     function open() {
       if (mode) return;
       S.back = { x: player.x, z: player.z, y: player.y, face: player.face };
@@ -2937,6 +2939,32 @@ window.addEventListener("error", function (e) {
     canvas.addEventListener("pointerdown", function (e) { if (!S.on || S.phase !== "aim") return; drag = { x: e.clientX, y: e.clientY, z0: S.aimZ, y0: S.aimY }; }, true);
     window.addEventListener("pointermove", function (e) { if (!drag) return; var k = 6 / Math.max(320, Math.min(innerWidth, innerHeight)); S.aimZ = clamp(drag.z0 + (e.clientX - drag.x) * k, -3.6, 3.6); S.aimY = clamp(drag.y0 - (e.clientY - drag.y) * k, 0.1, 3.2); }, true);
     window.addEventListener("pointerup", function () { drag = null; }, true);
+    // --- FLICK SHOT (phones): swipe up toward the spot you want. End point = aim, swipe speed = power, bulge of the swipe = curve.
+    function fkLog(r) { if (window.__fkd) window.__fkd.push(r); }
+    var fk = null, fkRay = new THREE.Raycaster(), fkPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), GX), fkHit = new THREE.Vector3(), fkNdc = new THREE.Vector2();
+    canvas.addEventListener("pointerdown", function (e) { if (!S.on) { fk = null; return; } fk = { x0: e.clientX, y0: e.clientY, t0: performance.now(), pts: [[e.clientX, e.clientY, performance.now()]], id: e.pointerId }; }, true);
+    window.addEventListener("pointermove", function (e) { if (fk && e.pointerId === fk.id) { fk.pts.push([e.clientX, e.clientY, performance.now()]); if (fk.pts.length > 40) fk.pts.shift(); } }, true);
+    window.addEventListener("pointerup", function (e) {
+      if (!fk || e.pointerId !== fk.id) { fkLog("nofk"); return; } var f = fk; fk = null; if (!S.on) return;
+      var now = performance.now(), dx = e.clientX - f.x0, dy = e.clientY - f.y0, len = Math.hypot(dx, dy), dur = now - f.t0;
+      if (dur > 700 || len < 55) { fkLog("short " + Math.round(dur) + " " + Math.round(len)); return; }
+      // speed over the last ~90 ms of the gesture
+      var pts = f.pts, a = pts[pts.length - 1]; for (var i = pts.length - 1; i >= 0; i--) { if (a[2] - pts[i][2] >= 90) { a = pts[i]; break; } if (i === 0) a = pts[0]; }
+      var b = pts[pts.length - 1], dtm = Math.max(16, b[2] - a[2]), spd = Math.hypot(b[0] - a[0], b[1] - a[1]) / dtm; // px per ms
+      if (S.turn === "keep" && (S.phase === "runup" || S.phase === "flight")) { // swipe to dive
+        if (len < 45) return; var dz = dx > 40 ? 1 : dx < -40 ? -1 : 0, hi = dy < -35 ? 1 : 0; if (!dz && !hi) hi = 0; dive(dz, hi); return;
+      }
+      if (S.turn !== "kick" || S.phase !== "aim" || dy > -40) { fkLog("state " + S.turn + S.phase + dy); return; }
+      fkNdc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); camera.updateMatrixWorld(); fkRay.setFromCamera(fkNdc, camera);
+      if (!fkRay.ray.intersectPlane(fkPlane, fkHit)) { fkLog("noplane"); return; }
+      S.aimZ = clamp(fkHit.z - GZ, -2.35, 2.35); S.aimY = clamp(fkHit.y - Y0, 0.15, 2.1);
+      // curve from the bulge of the path
+      var cx = dx / len, cy = dy / len, dev = 0; for (var j = 1; j < pts.length - 1; j++) { var cr = cx * (pts[j][1] - f.y0) - cy * (pts[j][0] - f.x0); if (Math.abs(cr) > Math.abs(dev)) dev = cr; }
+      var cv = Math.abs(dev) < len * 0.07 ? 0 : -Math.sign(dev) * Math.min(1, Math.abs(dev) / (len * 0.2)); S.curve = Math.round(cv * 10) / 10;
+      ui.querySelectorAll("[data-c]").forEach(function (x) { x.classList.toggle("on", Math.sign(+x.dataset.c) === Math.sign(S.curve)); });
+      S.power = clamp(0.35 + (spd - 0.5) * 0.3, 0.35, 0.86); S.flick = true; // capped just above the 'overhit' zone so a fast flick is strong, not random
+      flash(S.power > 0.78 ? "강슛!" : S.power < 0.45 ? "살짝" : "슛!", 500); release();
+    }, true);
     window.addEventListener("keydown", function (e) {
       if (!S.on) return; var k = e.key.toLowerCase();
       if (S.phase === "aim") { if (k === "arrowleft") S.aimZ = clamp(S.aimZ - 0.15, -3.6, 3.6); if (k === "arrowright") S.aimZ = clamp(S.aimZ + 0.15, -3.6, 3.6); if (k === "arrowup") S.aimY = clamp(S.aimY + 0.12, 0.1, 3.2); if (k === "arrowdown") S.aimY = clamp(S.aimY - 0.12, 0.1, 3.2); if (k === " " && !S.charging) { S.charging = true; S.chargeT = 0; e.preventDefault(); } }
@@ -3005,7 +3033,9 @@ window.addEventListener("error", function (e) {
       var goals = S.me.filter(Boolean).length, saves = S.ai.filter(function (g) { return !g; }).length, pts = goals * 10 + saves * 10;
       if (pts) gain(Math.round(pts / 2), pts); if (goals >= 3) mission("pk");
       if (goals > S.best) { S.best = goals; try { localStorage.setItem("hsv_fpk_best", String(goals)); } catch (e) { /* ignore */ } }
-      $u("fp-endt").textContent = title; $u("fp-ends").textContent = sub + " · 득점 " + goals + " · 선방 " + saves + (pts ? " · +" + pts + "P" : ""); $u("fp-end").hidden = false;
+      var stars = S.kind === "kick" ? (goals >= 5 ? 3 : goals >= 4 ? 2 : goals >= 3 ? 1 : 0) : S.kind === "keep" ? (saves >= 4 ? 3 : saves >= 3 ? 2 : saves >= 2 ? 1 : 0) : (goals > saves + 0 && S.me.filter(Boolean).length > S.ai.filter(Boolean).length ? (S.me.filter(Boolean).length - S.ai.filter(Boolean).length >= 2 ? 3 : 2) : 0);
+      if (stars) { gain(stars * 3, stars * 5); pts += stars * 5; }
+      $u("fp-endt").textContent = title; $u("fp-ends").textContent = "★".repeat(stars) + "☆".repeat(3 - stars) + "  " + sub + " · 득점 " + goals + " · 선방 " + saves + (pts ? " · +" + pts + "P" : ""); $u("fp-end").hidden = false;
     }
     var vA = new THREE.Vector3(), vB = new THREE.Vector3();
     tickers.push(function (dt) {
@@ -5070,7 +5100,7 @@ window.addEventListener("error", function (e) {
      SOUND EFFECTS (all synthesized here — no audio files, no licensing issues)
      ============================================================ */
   var SFX = (function () {
-    var ctx = null, out = null, noise = null, vol = 0.6, lastStep = 0, eng = null;
+    var ctx = null, out = null, noise = null, vol = 0.6, lastStep = 0, eng = null, sq = null;
     try { var sv = localStorage.getItem("hsv_sfx"); if (sv != null) vol = Math.max(0, Math.min(1, Number(sv))); } catch (e) { /* storage unavailable */ }
     function init() {
       if (ctx) { if (ctx.state === "suspended") ctx.resume(); return true; }
@@ -5109,6 +5139,11 @@ window.addEventListener("error", function (e) {
         if (vol <= 0 || !init()) return;
         if (!eng) { var o = ctx.createOscillator(), o2 = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain(); o.type = "sawtooth"; o2.type = "square"; f.type = "lowpass"; f.frequency.value = 600; g.gain.value = 0; o.connect(f); o2.connect(f); f.connect(g); g.connect(out); o.start(); o2.start(); eng = { o: o, o2: o2, f: f, g: g }; }
         var t = ctx.currentTime, fr = 42 + sp * 5.5; eng.o.frequency.setTargetAtTime(fr, t, 0.08); eng.o2.frequency.setTargetAtTime(fr * 0.5, t, 0.08); eng.f.frequency.setTargetAtTime(400 + sp * 40, t, 0.1); eng.g.gain.setTargetAtTime(0.035 + Math.min(0.05, sp * 0.003), t, 0.1);
+      },
+      squeal: function (amt) {
+        if (!sq && (amt <= 0.03 || vol <= 0 || !init())) return;
+        if (!sq) { var s2 = ctx.createBufferSource(); s2.buffer = noise; s2.loop = true; var f2 = ctx.createBiquadFilter(); f2.type = "bandpass"; f2.frequency.value = 1900; f2.Q.value = 6; var g2 = ctx.createGain(); g2.gain.value = 0; s2.connect(f2); f2.connect(g2); g2.connect(out); s2.start(); sq = { g: g2, f: f2 }; }
+        var t2 = ctx.currentTime; sq.g.gain.setTargetAtTime(amt > 0.03 ? Math.min(0.09, amt * 0.09) : 0, t2, 0.05); sq.f.frequency.setTargetAtTime(1700 + amt * 700, t2, 0.1);
       },
       stepOk: function (now, gap) { if (now - lastStep < gap) return false; lastStep = now; return true; }
     };
@@ -5633,7 +5668,7 @@ window.addEventListener("error", function (e) {
     return { open: open, close: close, state: S, roll: roll, totals: totals };
   })();
   if (/[?&]diag=hansarang\b/.test(location.search)) window.__bowl = BOWL;
-  if (/[?&]diag=hansarang\b/.test(location.search)) { window.__van = function () { return VAN; }; window.__drive = function () { enterVan(); }; window.__tp = function (x, z, y, f) { player.x = x; player.z = z; player.y = y || 0; player.face = f || 0; cam.yaw = player.face; snapCam = true; }; window.__geo = { SANCT: SANCT, Y2: Y2 }; window.__scene = scene; window.__cam = camera; window.__T = THREE; window.__race = { start: startRace, back: backToTown, get R() { return RACE; }, get VAN() { return VAN; }, applyVeh: function (i) { return applyVeh(i); } }; window.__av = function (k, v) { G.av[k] = v; rebuildAvatar(); }; window.__lead = function (i) { leadSpeak(i); return LEAD[i] ? LEAD[i].length : 0; }; }
+  if (/[?&]diag=hansarang\b/.test(location.search)) { window.__van = function () { return VAN; }; window.__tickers = tickers; window.__drive = function () { enterVan(); }; window.__tp = function (x, z, y, f) { player.x = x; player.z = z; player.y = y || 0; player.face = f || 0; cam.yaw = player.face; snapCam = true; }; window.__geo = { SANCT: SANCT, Y2: Y2 }; window.__scene = scene; window.__cam = camera; window.__T = THREE; window.__race = { start: startRace, back: backToTown, get R() { return RACE; }, get VAN() { return VAN; }, applyVeh: function (i) { return applyVeh(i); } }; window.__av = function (k, v) { G.av[k] = v; rebuildAvatar(); }; window.__lead = function (i) { leadSpeak(i); return LEAD[i] ? LEAD[i].length : 0; }; }
   EXTRA_ACTIONS.bowling = function () {
     var d = new Date(), day = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
     if (G.bowlVisit !== day) { G.bowlVisit = day; saveG(); gain(10, 10); }
@@ -5786,7 +5821,7 @@ window.addEventListener("error", function (e) {
     if (mode !== "drive") return;
     if (VAN.x > 300) { RACE.on = false; if (RACE.arrow) RACE.arrow.visible = false; if (RACE.ui) { RACE.ui.hidden = true; RACE.big.hidden = true; } VAN.x = -18; VAN.z = 25.85; VAN.h = -Math.PI / 2; VAN.v = 0; vanPose(0); } // leaving at the circuit drops you back in town
     var sx = VAN.x + Math.cos(VAN.h) * 1.8, sz = VAN.z - Math.sin(VAN.h) * 1.8; if (vanHits(sx, sz, 0)) { sx = VAN.x - Math.cos(VAN.h) * 1.8; sz = VAN.z + Math.sin(VAN.h) * 1.8; }
-    vanUI(false); VAN.v = 0; SFX.engine(0, 0);
+    vanUI(false); VAN.v = 0; SFX.engine(0, 0); SFX.squeal(0);
     exitModeBase();
     player.x = sx; player.z = sz; player.y = groundH(sx, sz); player.face = VAN.h; cam.yaw = VAN.h + Math.PI; snapCam = true; vanPose(0); SFX.play("door");
   }
@@ -5804,8 +5839,21 @@ window.addEventListener("error", function (e) {
     if (snap) { VAN.eye.copy(eye); VAN.tgt.copy(tgt); }
     else { var k = 1 - Math.exp(-dt * (VAN.view === 1 ? 30 : 6)); VAN.eye.lerp(eye, k); VAN.tgt.lerp(tgt, 1 - Math.exp(-dt * 10)); }
     if (sp > 14 && VAN.view === 0) VAN.eye.y += (Math.random() - 0.5) * 0.03 * (sp / 20);
+    if (VAN.shake > 0) { VAN.shake -= dt; VAN.eye.x += (Math.random() - 0.5) * VAN.shake * 0.5; VAN.eye.y += (Math.random() - 0.5) * VAN.shake * 0.5; }
     if (Math.abs(camera.fov - (CAMS.fov + Math.min(14, sp * 0.5))) > 0.1) { camera.fov += ((CAMS.fov + Math.min(14, sp * 0.5)) - camera.fov) * 0.1; camera.updateProjectionMatrix(); }
     snapCam = true;
+  }
+  var SKID = { pool: [], i: 0, t: 0 };
+  function skidTick(dt, amt) {
+    var now = clock;
+    if (amt > 0.35 && Math.abs(VAN.v) > 5 && now - SKID.t > 0.07) {
+      SKID.t = now; var fx = Math.sin(VAN.h), fz = Math.cos(VAN.h);
+      [-0.78, 0.78].forEach(function (side) {
+        var m = SKID.pool[SKID.i % 64]; if (!m) { m = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 1), new THREE.MeshBasicMaterial({ color: 0x0b0b0c, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 })); m.rotation.order = "YXZ"; scene.add(m); SKID.pool[SKID.i % 64] = m; }
+        SKID.i++; var x = VAN.x - fx * 1.35 + fz * side, z = VAN.z - fz * 1.35 - fx * side; m.position.set(x, groundH(x, z) + 0.04, z); m.rotation.set(-Math.PI / 2, VAN.h, 0); m.scale.set(1, Math.max(0.6, Math.abs(VAN.v) * 0.14), 1); m.userData.born = now; m.material.opacity = 0.4; m.visible = true;
+      });
+    }
+    for (var i = 0; i < SKID.pool.length; i++) { var k = SKID.pool[i]; if (!k.visible) continue; var age = now - k.userData.born; if (age > 9) { k.visible = false; } else if (age > 4) k.material.opacity = 0.4 * (1 - (age - 4) / 5); }
   }
   tickers.push(function (dt) {
     dt = Math.min(dt || 0.016, 0.05);
@@ -5819,7 +5867,8 @@ window.addEventListener("error", function (e) {
     VAN.boost = Math.max(0, VAN.boost - dt); VAN.boostCd = Math.max(0, VAN.boostCd - dt);
     var vmax = VAN.boost > 0 ? VEHS[VAN.veh || 0].max + 8 : VEHS[VAN.veh || 0].max;
     var VT = VEHS[VAN.veh || 0];
-    if (acc) VAN.v += (VAN.v < 0 ? 14 : (VAN.boost > 0 ? 16 : VT.acc)) * dt;
+    if (VAN.shiftT > 0) VAN.shiftT -= dt;
+    if (acc) { var ab = VAN.v < 0 ? 14 : (VAN.boost > 0 ? 16 : VT.acc); if (VAN.v > 0) ab *= clamp(1.12 - 0.78 * Math.pow(VAN.v / vmax, 1.6), 0.18, 1.1); if (VAN.shiftT > 0) ab *= 0.25; VAN.v += ab * dt; } // power fades toward top speed; brief cut while shifting
     if (brk) VAN.v -= (VAN.v > 0.3 ? 16 : 5) * dt;
     if (!acc && !brk) VAN.v *= Math.exp(-dt * 0.6);
     VAN.v = clamp(VAN.v, -5, vmax); if (!brk && VAN.v < 0 && !acc) VAN.v *= Math.exp(-dt * 3);
@@ -5829,7 +5878,7 @@ window.addEventListener("error", function (e) {
     var nx = VAN.x + Math.sin(nh) * VAN.v * dt * grip + Math.cos(nh) * slide * dt, nz = VAN.z + Math.cos(nh) * VAN.v * dt * grip - Math.sin(nh) * slide * dt;
     if (drift && Math.abs(VAN.v) > 6 && Math.abs(VAN.steer) > 0.2) { VAN.v *= Math.exp(-dt * 0.4); VAN.driftScore = (VAN.driftScore || 0) + dt * Math.abs(VAN.v); }
     if (vanHits(nx, nz, nh)) {
-      if (Math.abs(VAN.v) > 5) { SFX.play("land"); pop("쿵!", VAN.x, groundH(VAN.x, VAN.z) + 2.4, VAN.z); }
+      if (Math.abs(VAN.v) > 5) { SFX.play("land"); pop("쿵!", VAN.x, groundH(VAN.x, VAN.z) + 2.4, VAN.z); VAN.shake = Math.min(0.5, 0.15 + Math.abs(VAN.v) * 0.02); try { if (window.__hapOn && window.__hapOn() && navigator.vibrate) navigator.vibrate(Math.min(70, 20 + Math.abs(VAN.v) * 3)); } catch (e) { /* ignore */ } }
       // slide along the obstacle instead of bouncing back
       if (!vanHits(nx, VAN.z, nh)) { VAN.x = nx; VAN.h = nh; VAN.v *= 0.6; } else if (!vanHits(VAN.x, nz, nh)) { VAN.z = nz; VAN.h = nh; VAN.v *= 0.6; } else { VAN.v = -VAN.v * 0.15; if (!vanHits(VAN.x, VAN.z, nh)) VAN.h = nh; }
     }
@@ -5850,8 +5899,27 @@ window.addEventListener("error", function (e) {
     player.x = VAN.x; player.z = VAN.z; player.y = groundH(VAN.x, VAN.z); player.face = VAN.h; player.speed = 0;
     vanCam(dt, false);
     var kmh = Math.round(Math.abs(VAN.v) * 3.6);
-    if (VAN.speedEl) VAN.speedEl.innerHTML = kmh + '<small style="font-size:12px;font-weight:600"> km/h</small>' + (VAN.boost > 0 ? '<div style="font-size:11px;color:#f6b04a">부스터!</div>' : VAN.v < -0.2 ? '<div style="font-size:11px">후진</div>' : "");
-    SFX.engine(1, Math.abs(VAN.v));
+    // automatic gearbox: 5 forward gears, RPM climbs inside each gear and drops on the upshift
+    var gUp = [0.15, 0.33, 0.53, 0.75], rr = Math.min(1.2, Math.abs(VAN.v) / VT.max), gOld = VAN.gear || 1;
+    if (VAN.v < -0.3) VAN.gear = -1; else {
+      var gg = VAN.gear > 0 ? VAN.gear : 1;
+      if (gg < 5 && rr > gUp[gg - 1] + 0.01) gg++; else if (gg > 1 && rr < gUp[gg - 2] - 0.05) gg--;
+      VAN.gear = Math.abs(VAN.v) < 0.25 && !acc ? 0 : gg;
+    }
+    if (VAN.gear > gOld && gOld > 0) { VAN.shiftT = 0.18; VAN.rpm = Math.max(0.2, (VAN.rpm || 0.5) - 0.28); }
+    var rtarget;
+    if (VAN.gear === 0) rtarget = acc ? 0.62 : 0.2;
+    else if (VAN.gear < 0) rtarget = 0.3 + Math.min(0.4, Math.abs(VAN.v) / 5 * 0.4);
+    else { var glo = VAN.gear === 1 ? 0 : gUp[VAN.gear - 2], ghi = VAN.gear === 5 ? 1.05 : gUp[VAN.gear - 1]; rtarget = 0.3 + 0.62 * clamp((rr - glo) / (ghi - glo), 0, 1) + (acc ? 0.05 : 0); }
+    VAN.rpm = (VAN.rpm || 0.2) + (rtarget - (VAN.rpm || 0.2)) * Math.min(1, dt * 9);
+    var gl = VAN.gear === 0 ? "N" : VAN.gear < 0 ? "R" : "D" + VAN.gear;
+    if (VAN.speedEl) VAN.speedEl.innerHTML = kmh + '<small style="font-size:12px;font-weight:600"> km/h</small><div style="font-size:12px;font-weight:700;opacity:.9">' + gl + '</div><div style="width:64px;height:5px;border-radius:3px;background:rgba(255,255,255,.25);margin:2px auto 0;overflow:hidden"><i style="display:block;height:100%;width:' + Math.round(clamp(VAN.rpm, 0, 1) * 100) + '%;background:' + (VAN.rpm > 0.88 ? '#ff5a4a' : '#7be0a2') + '"></i></div>' + (VAN.boost > 0 ? '<div style="font-size:11px;color:#f6b04a">부스터!</div>' : "");
+    SFX.engine(1, VAN.rpm * 20 + (VAN.boost > 0 ? 1.5 : 0));
+    // tyre squeal + skid marks: hard cornering, braking from speed, drifting
+    var latG = Math.abs(VAN.v * VAN.v / 3.2 * Math.tan(VAN.steer)), sq = Math.max(drift && Math.abs(VAN.v) > 4 ? 1 : 0, clamp((latG - 9) / 12, 0, 1), brk && VAN.v > 8 ? clamp((VAN.v - 8) / 10, 0, 0.7) : 0);
+    SFX.squeal(sq);
+    skidTick(dt, sq);
+    if (VAN.blink) { if (Math.abs(VAN.steer) > 0.22) VAN.blinkTurned = true; else if (VAN.blinkTurned && Math.abs(VAN.steer) < 0.06) { VAN.blink = 0; VAN.blinkTurned = false; } } // indicator cancels after the turn
     if (VAN.guideEl) {
       var inBay = PARK.bays.filter(function (b) { return Math.abs(VAN.x - b.x) < 1.3 && Math.abs(VAN.z - b.z) < 2.2; })[0];
       var dB = Math.hypot(VAN.x + 59, VAN.z - 29.2);
@@ -7330,6 +7398,7 @@ window.addEventListener("error", function (e) {
     var on = true; try { on = localStorage.getItem("hsv_haptic") !== "0"; } catch (e) { /* storage unavailable */ }
     var sp = SFX.play;
     SFX.play = function (name) { try { if (on && HAP[name]) navigator.vibrate(HAP[name]); } catch (e) { /* ignore */ } return sp.apply(this, arguments); };
+    window.__hapOn = function () { return on; };
     window.__haptic = function (v) { on = !!v; try { localStorage.setItem("hsv_haptic", on ? "1" : "0"); } catch (e) { /* ignore */ } if (on) navigator.vibrate(30); return on; };
   })();
 
