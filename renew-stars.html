@@ -2225,7 +2225,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-2210", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-2212", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -7203,7 +7203,7 @@ window.addEventListener("error", function (e) {
     var R = { n: 0, combo: 0, last: -99, t0: 0, run: false, rest: 0, best: G.starBest || 0, got: 0 };
     function reset() { R.n = 0; R.combo = 0; R.run = false; R.got = 0; objs.forEach(function (o) { o.on = true; }); }
     reset();
-    tickers.push(function (dt) {
+    var starTick = function (dt) {
       var drv = mode === "drive" && started;
       if (R.rest > 0) { R.rest -= dt; if (R.rest <= 0) reset(); }
       var show = drv && R.rest <= 0;
@@ -7226,8 +7226,9 @@ window.addEventListener("error", function (e) {
       if (R.run && clock - R.last > 3.5) R.combo = 0;
       hud.hidden = !drv || R.rest > 0 || Math.abs(VAN.x - X) > 40;
       if (!hud.hidden) hud.textContent = "★ " + R.n + " / " + objs.length + (R.combo > 1 ? "  ·  콤보 x" + R.combo : "") + (R.run ? "  ·  " + (clock - R.t0).toFixed(1) + "초" : "") + (R.best ? "  ·  최고 " + R.best.toFixed(1) + "초" : "");
-    });
-    window.__stars = { R: R, objs: objs };
+    };
+    tickers.push(starTick);
+    if (/[?&]diag=hansarang\b/.test(location.search)) window.__stars = { R: R, objs: objs, step: function (dt) { clock += dt; starTick(dt); } };
   })();
 
   /* ============================================================
