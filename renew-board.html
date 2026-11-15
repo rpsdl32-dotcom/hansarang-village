@@ -2165,7 +2165,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-1015", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-1017", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -2508,8 +2508,8 @@ window.addEventListener("error", function (e) {
       return G;
     }
     // main: behind the south touchline facing the pitch (9.6 x 5.4 m screen); entrance: small board at the west end
-    board(-6, 83.2, Math.PI, 9.6, 2.4, [-3.2, 3.2]);
-    board(-22.2, 75, Math.PI / 2, 3.2, 1.1, [-1.0, 1.0]);
+    board(12.4, 75, -Math.PI / 2, 8, 5.7, [-2.6, 2.6]);   // main: behind the east goal, above the score board (seen in the shoot-out)
+    board(-24.6, 75, -Math.PI / 2, 3.2, 1.2, [-1.0, 1.0]); // second: outside the west terrace, facing people walking up
     var vid = document.createElement("video"); vid.muted = true; vid.loop = false; vid.playsInline = true; vid.setAttribute("playsinline", ""); vid.setAttribute("webkit-playsinline", ""); vid.crossOrigin = "anonymous"; vid.preload = "metadata";
     var imgs = {}, poster = new Image(); poster.src = OLSC_BOARD_CONFIG.poster;
     var st = { i: -1, t0: 0, loading: false, failed: false, sound: false, active: false, last: 0, item: null };
