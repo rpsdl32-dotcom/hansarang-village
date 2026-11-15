@@ -651,6 +651,12 @@ window.addEventListener("error", function (e) {
       g.fillStyle = "rgb(" + (l - 4) + "," + (l - 1) + "," + (l + 4) + ")"; g.fillRect(col * 256, row * 128, 256, 128);
       for (var k = 0; k < 900; k++) { var v = r(); g.fillStyle = v < 0.5 ? "rgba(60,64,72,0.16)" : "rgba(255,255,255,0.18)"; g.fillRect(col * 256 + r() * 256, row * 128 + r() * 128, 1.6, 1.6); }
     }
+    for (var row2 = 0; row2 < 4; row2++) for (var col2 = 0; col2 < 2; col2++) { // bevelled panel edges: light top/left, shade bottom/right
+      var px = col2 * 256, py = row2 * 128;
+      g.fillStyle = "rgba(255,255,255,0.22)"; g.fillRect(px + 3, py + 3, 250, 3); g.fillRect(px + 3, py + 3, 3, 122);
+      g.fillStyle = "rgba(40,44,52,0.20)"; g.fillRect(px + 3, py + 122, 250, 3); g.fillRect(px + 250, py + 3, 3, 122);
+    }
+    for (var k2 = 0; k2 < 46; k2++) { var sx = r() * w, sy = r() * h, sl = 30 + r() * 90, gr2 = g.createLinearGradient(0, sy, 0, sy + sl); gr2.addColorStop(0, "rgba(90,84,76,0.10)"); gr2.addColorStop(1, "rgba(90,84,76,0)"); g.fillStyle = gr2; g.fillRect(sx, sy, 2 + r() * 3, sl); } // rain streaks
     g.fillStyle = "rgba(70,74,82,0.85)";
     for (var y = 0; y <= 4; y++) g.fillRect(0, y * 128 - 2, w, 4);
     for (var x = 0; x <= 2; x++) g.fillRect(x * 256 - 2, 0, 4, h);
@@ -663,10 +669,14 @@ window.addEventListener("error", function (e) {
       var col = t < 0.45 ? [150, 146, 140] : t < 0.8 ? [128, 122, 116] : [150, 112, 98];
       var j = (r() - 0.5) * 20; g.fillStyle = "rgb(" + (col[0] + j | 0) + "," + (col[1] + j | 0) + "," + (col[2] + j | 0) + ")";
       g.fillRect(x + off + 2, y + 2, bw - 4, bh - 4);
+      g.fillStyle = "rgba(255,255,255,0.14)"; g.fillRect(x + off + 2, y + 2, bw - 4, 2); g.fillRect(x + off + 2, y + 2, 2, bh - 4);
+      g.fillStyle = "rgba(0,0,0,0.16)"; g.fillRect(x + off + 2, y + bh - 4, bw - 4, 2);
+      if (r() < 0.22) { g.fillStyle = "rgba(255,255,255,0.07)"; g.fillRect(x + off + 10 + r() * 20, y + 8, 14 + r() * 16, 10); } // worn patch
+      if (r() < 0.07) { g.fillStyle = "rgba(70,96,52,0.45)"; g.fillRect(x + off + r() * (bw - 6), y + bh - 3, 6 + r() * 8, 3); } // moss in the joint
     }
     for (var k = 0; k < 3000; k++) { g.fillStyle = "rgba(0,0,0,0.08)"; g.fillRect(r() * w, r() * h, 2, 2); }
   });
-  T.concrete = canvasTex(256, 256, function (g, w, h) { noiseFill(g, w, h, "#9a9892", 0.12, 4, 7); });
+  T.concrete = canvasTex(256, 256, function (g, w, h) { noiseFill(g, w, h, "#9a9892", 0.12, 4, 7); var r = mulberry32(19); g.fillStyle = "rgba(60,58,54,0.30)"; g.fillRect(0, 0, w, 2); g.fillRect(0, 0, 2, h); for (var c = 0; c < 3; c++) { var cx = r() * w, cy = r() * h; g.strokeStyle = "rgba(60,58,54,0.22)"; g.lineWidth = 1; g.beginPath(); g.moveTo(cx, cy); for (var q = 0; q < 6; q++) { cx += (r() - 0.5) * 22; cy += 8 + r() * 12; g.lineTo(cx, cy); } g.stroke(); } });
   T.asphalt = canvasTex(512, 512, function (g, w, h) { // aged city asphalt like the Samhak-ro photo: aggregate grain, sealed crack lines, patch repairs, oil stains
     noiseFill(g, w, h, "#4a4c50", 0.18, 2, 9); var r = mulberry32(77);
     for (var k = 0; k < 5; k++) { g.fillStyle = "rgba(" + (r() < 0.5 ? "30,31,34" : "95,96,98") + "," + (0.10 + r() * 0.12) + ")"; var px = r() * w, py = r() * h; g.fillRect(px, py, 40 + r() * 90, 30 + r() * 70); }
@@ -2215,7 +2225,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-1818", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-2212", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -5514,7 +5524,7 @@ window.addEventListener("error", function (e) {
     return { open: open, close: close, state: S, roll: roll, totals: totals };
   })();
   if (/[?&]diag=hansarang\b/.test(location.search)) window.__bowl = BOWL;
-  if (/[?&]diag=hansarang\b/.test(location.search)) { window.__tp = function (x, z, y, f) { player.x = x; player.z = z; player.y = y || 0; player.face = f || 0; cam.yaw = player.face; snapCam = true; }; window.__geo = { SANCT: SANCT, Y2: Y2 }; window.__scene = scene; window.__cam = camera; window.__T = THREE; window.__race = { start: startRace, back: backToTown, get R() { return RACE; }, get VAN() { return VAN; }, applyVeh: function (i) { return applyVeh(i); } }; window.__av = function (k, v) { G.av[k] = v; rebuildAvatar(); }; window.__lead = function (i) { leadSpeak(i); return LEAD[i] ? LEAD[i].length : 0; }; }
+  if (/[?&]diag=hansarang\b/.test(location.search)) { window.__van = function () { return VAN; }; window.__drive = function () { enterVan(); }; window.__tp = function (x, z, y, f) { player.x = x; player.z = z; player.y = y || 0; player.face = f || 0; cam.yaw = player.face; snapCam = true; }; window.__geo = { SANCT: SANCT, Y2: Y2 }; window.__scene = scene; window.__cam = camera; window.__T = THREE; window.__race = { start: startRace, back: backToTown, get R() { return RACE; }, get VAN() { return VAN; }, applyVeh: function (i) { return applyVeh(i); } }; window.__av = function (k, v) { G.av[k] = v; rebuildAvatar(); }; window.__lead = function (i) { leadSpeak(i); return LEAD[i] ? LEAD[i].length : 0; }; }
   EXTRA_ACTIONS.bowling = function () {
     var d = new Date(), day = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
     if (G.bowlVisit !== day) { G.bowlVisit = day; saveG(); gain(10, 10); }
@@ -6004,7 +6014,8 @@ window.addEventListener("error", function (e) {
     emote: { t: "동작으로 인사·박수하기", u: "회", goal: [5, 25], ev: "emote" },
     place: { t: "새로운 장소 방문", u: "곳", goal: [3, 10], ev: "place" },
     park: { t: "주차 칸에 주차하기", u: "회", goal: [1, 3], ev: "park" },
-    pray: { t: "본당에서 기도 동작하기", u: "회", goal: [1, 5], ev: "pray" }
+    pray: { t: "본당에서 기도 동작하기", u: "회", goal: [1, 5], ev: "pray" },
+    star: { t: "삼학로 별 모으기", u: "개", goal: [8, 40], ev: "star" }
   };
   function rollQuests(kind) {
     var keys = Object.keys(QPOOL), seed = 0, k = kind === "d" ? dayKey() : weekKey(); for (var i = 0; i < k.length; i++) seed = seed * 31 + k.charCodeAt(i) | 0;
@@ -7168,6 +7179,57 @@ window.addEventListener("error", function (e) {
   $("#go-tour").addEventListener("click", function () { enterWorld("tour"); });
   $("#go-friends").addEventListener("click", function () { started || enterWorld("go"); setTimeout(function () { openPanel("friends"); }, 350); });
   setTimeout(function () { try { go.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 50);
+
+  /* ============================================================
+     SAMHAK-RO STAR RUN — drive the van along Samhak-ro and collect
+     stars. Chain stars within 3.5 s to raise the combo (x1..x5).
+     Collect all 16 for a finish bonus; best time is saved.
+     ============================================================ */
+  (function () {
+    var X = SAM.x, pts = [], i;
+    for (i = 0; i < 16; i++) pts.push([X + (i % 2 ? 4 : -4) * (i % 4 < 2 ? 1 : 0.6), -6 + i * 6.4]);
+    var geo = new THREE.OctahedronGeometry(0.62), ring = new THREE.TorusGeometry(0.95, 0.06, 6, 24);
+    var mRing = std(0xfff2b0, { emissive: 0xffc83a, emissiveIntensity: 0.7, roughness: 0.4, transparent: true, opacity: 0.55 });
+    var objs = pts.map(function (p, k) {
+      var g = new THREE.Group(), y = groundH(p[0], p[1]);
+      var s = new THREE.Mesh(geo, M_star); s.position.y = 1.5; g.add(s);
+      var rg = new THREE.Mesh(ring, mRing); rg.position.y = 1.5; rg.rotation.x = Math.PI / 2; g.add(rg);
+      g.position.set(p[0], y, p[1]); g.visible = false; scene.add(g);
+      return { g: g, s: s, rg: rg, x: p[0], z: p[1], on: true, k: k };
+    });
+    var hud = document.createElement("div");
+    hud.style.cssText = "position:fixed;top:calc(env(safe-area-inset-top,0px) + 56px);left:50%;transform:translateX(-50%);padding:6px 14px;border-radius:14px;background:rgba(20,24,32,.72);color:#fff;font:700 14px system-ui,sans-serif;letter-spacing:.02em;z-index:30;pointer-events:none;white-space:nowrap";
+    hud.hidden = true; document.body.appendChild(hud);
+    var R = { n: 0, combo: 0, last: -99, t0: 0, run: false, rest: 0, best: G.starBest || 0, got: 0 };
+    function reset() { R.n = 0; R.combo = 0; R.run = false; R.got = 0; objs.forEach(function (o) { o.on = true; }); }
+    reset();
+    var starTick = function (dt) {
+      var drv = mode === "drive" && started;
+      if (R.rest > 0) { R.rest -= dt; if (R.rest <= 0) reset(); }
+      var show = drv && R.rest <= 0;
+      for (var k = 0; k < objs.length; k++) {
+        var o = objs[k], vis = show && o.on; o.g.visible = vis; if (!vis) continue;
+        o.s.rotation.y += dt * 2.6; o.s.position.y = 1.5 + Math.sin(clock * 2.4 + k) * 0.15; o.rg.rotation.z += dt * 1.4;
+        if (Math.hypot(VAN.x - o.x, VAN.z - o.z) < 3.4) {
+          o.on = false; o.g.visible = false; var now = clock;
+          R.combo = (now - R.last < 3.5) ? Math.min(5, R.combo + 1) : 1; R.last = now;
+          if (!R.run) { R.run = true; R.t0 = now; }
+          R.n++; var pt = 2 * R.combo; gain(pt, pt); track("star"); SFX.play("coin");
+          pop(R.combo > 1 ? "x" + R.combo + " +" + pt + "P" : "+" + pt + "P", o.x, groundH(o.x, o.z) + 2.4, o.z);
+          if (R.n >= objs.length) {
+            var tm = now - R.t0, nb = !R.best || tm < R.best; if (nb) { R.best = tm; G.starBest = Math.round(tm * 10) / 10; saveG(); }
+            gain(30, 30); SFX.play("mission"); toast("삼학로 별 모으기 완주", tm.toFixed(1) + "초 · +30P" + (nb ? " · 최고 기록!" : " · 최고 " + R.best.toFixed(1) + "초"));
+            R.run = false; R.rest = 25;
+          }
+        }
+      }
+      if (R.run && clock - R.last > 3.5) R.combo = 0;
+      hud.hidden = !drv || R.rest > 0 || Math.abs(VAN.x - X) > 40;
+      if (!hud.hidden) hud.textContent = "★ " + R.n + " / " + objs.length + (R.combo > 1 ? "  ·  콤보 x" + R.combo : "") + (R.run ? "  ·  " + (clock - R.t0).toFixed(1) + "초" : "") + (R.best ? "  ·  최고 " + R.best.toFixed(1) + "초" : "");
+    };
+    tickers.push(starTick);
+    if (/[?&]diag=hansarang\b/.test(location.search)) window.__stars = { R: R, objs: objs, step: function (dt) { clock += dt; starTick(dt); } };
+  })();
 
   /* ============================================================
      CINEMATIC OPENING: sunset fly-in over Samhak-ro to the church,
