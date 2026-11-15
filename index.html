@@ -1981,6 +1981,10 @@ window.addEventListener("error", function (e) {
       sh.userData.elbow = el2; sh.userData.hand = hand; sh.rotation.z = side * 0.06; return sh;
     }
     var armL = arm(-1), armR = arm(1);
+    // clothing detail: belt + buckle, hem and neckline trims, sleeve cuffs
+    if (o.top !== "dress" && o.top !== "overall") { var bl = add(hg("c_belt", function () { var c = new THREE.TorusGeometry(0.165, 0.016, 6, 26); c.scale(1, 0.82, 1); return c; }), soft(0x2a1e16, 0.5), 0, 0.43, 0); bl.rotation.x = Math.PI / 2; add(hg("c_buckle", function () { return new THREE.BoxGeometry(0.045, 0.03, 0.012); }), std(0xd8c070, { roughness: 0.3, metalness: 0.8 }), 0, 0.43, 0.138); }
+    if (!o.top || o.top === "tee" || o.top === "jersey") { var nk = add(hg("c_neckrib", function () { return new THREE.TorusGeometry(0.08, 0.014, 6, 18); }), soft(new THREE.Color(o.shirt == null ? 0x1f4fd8 : o.shirt).multiplyScalar(0.7).getHex(), 0.8), 0, 0.755, 0.005); nk.rotation.x = Math.PI / 2; }
+    [armL, armR].forEach(function (sh) { var cf = new THREE.Mesh(hg("c_sleeve", function () { return new THREE.TorusGeometry(0.06, 0.012, 6, 16); }), shirt); cf.rotation.x = Math.PI / 2; cf.position.y = -0.09; cf.castShadow = true; sh.add(cf); });
     // neck + head
     add(hg("neck", function () { return taper(0.047, 0.052, 0.1, 10); }), skin, 0, 1.55, 0);
     var hd = new THREE.Group(); hd.position.y = 1.62; g.add(hd);
@@ -2082,6 +2086,10 @@ window.addEventListener("error", function (e) {
       add(hg("c_shin", function () { return capsule(0.068, 0.17, 12); }), pants, 0, 0, 0, knee);
       var boot = add(hg("c_boot", function () { var s = new THREE.SphereGeometry(0.085, 16, 12); s.scale(1, 0.62, 1.35); return s; }), shoeM, 0, -0.18, 0.03, knee);
       add(hg("c_sole", function () { var c = new THREE.CylinderGeometry(0.085, 0.085, 0.025, 16); c.scale(1, 1, 1.35); return c; }), soft(0x3a2a20, 0.8), 0, -0.215, 0.03, knee);
+      // shoe detail: white laces across the top, toe cap, ankle cuff
+      for (var lc = 0; lc < 3; lc++) add(hg("c_lace", function () { return new THREE.BoxGeometry(0.06, 0.008, 0.01); }), soft(0xf4f2ee, 0.6), 0, -0.135 - lc * 0.004, 0.06 + lc * 0.022, knee).rotation.x = -0.5;
+      add(hg("c_toecap", function () { var s2 = new THREE.SphereGeometry(0.06, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2); s2.scale(1.2, 0.5, 0.9); return s2; }), soft(0xf4f2ee, 0.6), 0, -0.2, 0.12, knee).rotation.x = Math.PI / 2 - 0.2;
+      add(hg("c_cuff", function () { return new THREE.TorusGeometry(0.066, 0.012, 6, 18); }), pants, 0, -0.115, 0.0, knee).rotation.x = Math.PI / 2;
       hip.userData.knee = knee; return hip;
     }
     var legL = leg(-1), legR = leg(1);
@@ -2123,6 +2131,8 @@ window.addEventListener("error", function (e) {
     add(hg("c_neck", function () { return new THREE.CylinderGeometry(0.06, 0.07, 0.1, 12); }), skin, 0, 0.78, 0);
     [-1, 1].forEach(function (s) { add(hg("c_ear", function () { var e = new THREE.SphereGeometry(0.05, 10, 8); e.scale(0.6, 1, 0.8); return e; }), skin, s * 0.28, -0.02, 0, hd); });
     add(hg("c_nose", function () { return new THREE.SphereGeometry(0.022, 10, 8); }), skin, 0, -0.035, 0.272, hd);
+    // face detail: soft blush and eyebrows in the hair colour
+    [-1, 1].forEach(function (sd) { var bl2 = add(hg("c_blush", function () { return new THREE.CircleGeometry(0.035, 14); }), HMAT.c_blushM || (HMAT.c_blushM = new THREE.MeshBasicMaterial({ color: 0xff8a8a, transparent: true, opacity: 0.35, depthWrite: false })), sd * 0.15, -0.06, 0.238, hd); bl2.rotation.y = sd * 0.55; bl2.castShadow = false; var br = add(hg("c_brow", function () { return new THREE.BoxGeometry(0.06, 0.012, 0.012); }), hairM, sd * 0.085, 0.085, 0.262, hd); br.rotation.z = -sd * 0.12; br.castShadow = false; });
     // hair: big soft volumes
     var hs = o.hair || "short";
     var cap = add(hg("c_hair_" + hs, function () { var s = new THREE.SphereGeometry(0.3, 32, 20, 0, Math.PI * 2, 0, hs === "bob" ? Math.PI * 0.62 : Math.PI * 0.5); return s; }), hairM, 0, 0.02, -0.02, hd);
@@ -2205,7 +2215,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-1801", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-1818", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
