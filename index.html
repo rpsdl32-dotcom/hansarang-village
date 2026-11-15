@@ -140,6 +140,9 @@ body.moded #praisecard { display: none; }
 #chatbox { position: absolute; left: var(--pl); bottom: calc(var(--pb) + 46px); width: 300px; box-sizing: border-box; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
 #chat-log { max-height: 120px; min-height: 40px; overflow-y: auto; font-size: 12.5px; line-height: 1.5; user-select: text; -webkit-user-select: text; }
 .cl { overflow-wrap: anywhere; } .cl b { color: var(--neon); font-weight: 600; } .cl.sys { opacity: 0.65; font-size: 11.5px; }
+.cl-rep { appearance: none; font: inherit; font-size: 11px; margin-left: 6px; background: rgba(243,246,250,0.14); color: inherit; border: 0; border-radius: 4px; padding: 1px 6px; cursor: pointer; opacity: 0.7; vertical-align: baseline; }
+.cl-rep.arm { background: #c0392b; color: #fff; opacity: 1; }
+@media (pointer: coarse) { .cl-rep { padding: 5px 9px; font-size: 12px; } }
 #chat-emo { display: flex; gap: 4px; align-items: center; }
 #chat-emo button { appearance: none; font: inherit; font-size: 15px; background: rgba(243,246,250,0.12); border: 0; border-radius: 6px; padding: 3px 6px; cursor: pointer; color: var(--paper); }
 #chat-emo #chat-near { margin-left: auto; font-size: 11.5px; padding: 5px 8px; }
@@ -2291,7 +2294,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-2301", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-2313", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -3280,7 +3283,7 @@ window.addEventListener("error", function (e) {
     avatar: function () {
       head("Avatar", "내 아바타", "오른쪽에 보이는 캐릭터가 바로 바뀝니다.");
       var lab = pEl("label", "p-field", "닉네임"); var inp = el("input"); inp.type = "text"; inp.id = "nick-input"; inp.maxLength = 8; inp.value = G.av.nick; inp.placeholder = "8자까지"; inp.autocomplete = "off";
-      inp.addEventListener("input", function () { G.av.nick = inp.value.trim().slice(0, 8); saveG(); }); lab.appendChild(inp);
+      inp.addEventListener("input", function () { var nv = inp.value.trim().slice(0, 8); if (nv && mask(nv) !== nv) { nv = ""; inp.value = ""; toast("쓸 수 없는 이름이에요", "고운 이름으로 지어 주세요."); } G.av.nick = nv; saveG(); }); lab.appendChild(inp);
       function group(title, key, list, isColor) {
         pEl("p", "tl-title", title); var row = pEl("div", "opts");
         list.forEach(function (o) {
@@ -3413,8 +3416,33 @@ window.addEventListener("error", function (e) {
     return { hair: HAIRS.indexOf(a.hair) >= 0 ? a.hair : "short", face: FACES.indexOf(a.face) >= 0 ? a.face : "smile", acc: ACCS.indexOf(a.acc) >= 0 ? a.acc : "none",
       hairCol: num(a.hairCol, 0, 0xffffff, 0x221a14) | 0, shirt: num(a.shirt, 0, 0xffffff, 0x1f4fd8) | 0, pants: num(a.pants, 0, 0xffffff, 0x1b2336) | 0, skin: num(a.skin, 0, 0xffffff, 0xf0c7a0) | 0, top: TOPS.indexOf(a.top) >= 0 ? a.top : "tee", shoes: num(a.shoes, 0, 0xffffff, 0xf2f2f0) | 0 };
   }
-  var BAD = ["씨발", "시발", "ㅅㅂ", "병신", "ㅂㅅ", "지랄", "좆", "개새끼", "새끼", "꺼져", "fuck", "shit"];
-  function mask(s) { BAD.forEach(function (w) { s = s.split(w).join("**"); }); return s; }
+  /* CHAT SAFETY: default blocked-word list + church-editable changes (this device) + personal-info masking.
+     Matching ignores spaces/dots/symbols between letters ("시.발", "씨 발") and masks the original span.
+     Limits: cannot catch every spelling trick; real moderation of other devices needs a server. */
+  var BAD_DEFAULT = ["씨발", "시발", "씨팔", "시팔", "씨빨", "시빨", "ㅅㅂ", "ㅆㅂ", "병신", "ㅂㅅ", "븅신", "지랄", "ㅈㄹ", "좆", "좃", "개새끼", "개색", "새끼야", "니미", "느금", "애미", "엿먹", "꺼져", "닥쳐", "미친놈", "미친년", "썅", "씹새", "씹년", "씹할", "창녀", "김치녀", "섹스", "야동", "몸캠", "조건만남", "성인방", "자살해", "죽여버", "fuck", "shit", "bitch", "porn"];
+  function hsvLoad(k, d) { try { var v = JSON.parse(localStorage.getItem(k) || "null"); return v == null ? d : v; } catch (e) { return d; } }
+  function hsvSave(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* ignore */ } }
+  function wnorm(w) { return String(w).toLowerCase().replace(/[^0-9a-zㄱ-ㆎ가-힣]/g, ""); }
+  var BAD = [];
+  function badRebuild() {
+    var c = hsvLoad("hsv_badwords", {}), add = (c && c.add) || [], del = {}; ((c && c.del) || []).forEach(function (w) { del[wnorm(w)] = 1; });
+    var seen = {}; BAD = [];
+    BAD_DEFAULT.concat(add).forEach(function (w) { var n = wnorm(w); if (n.length >= 1 && !del[n] && !seen[n]) { seen[n] = 1; BAD.push(n); } });
+  }
+  badRebuild();
+  var PII = [/(?:\+?82[-.\s]?)?0\d{1,2}[-.\s]?\d{3,4}[-.\s]?\d{4}/g, /https?:\/\/\S+|www\.\S+|\b[\w-]+\.(?:com|net|kr|me|io|tv|kakao\.com)\b\S*/gi, /[\w.+-]+@[\w-]+\.[\w.]+/g, /(?:카톡|카카오톡|라인|텔레|텔레그램|인스타|인별)\s*(?:id|아이디|ID)?\s*[:：]?\s*[A-Za-z0-9._-]{3,}/g];
+  function maskInfo(s) { PII.forEach(function (re) { s = s.replace(re, "(가림)"); }); return s; }
+  function mask(s) {
+    s = maskInfo(String(s));
+    var keep = [], norm = "", i, ch;
+    for (i = 0; i < s.length; i++) { ch = s.charAt(i).toLowerCase(); if (/[0-9a-zㄱ-ㆎ가-힣]/.test(ch)) { keep.push(i); norm += ch; } }
+    var hit = {}, any = false;
+    BAD.forEach(function (w) { var at = norm.indexOf(w); while (at >= 0) { any = true; for (var j = keep[at]; j <= keep[at + w.length - 1]; j++) hit[j] = 1; at = norm.indexOf(w, at + w.length); } });
+    if (!any) return s;
+    var out = ""; for (i = 0; i < s.length; i++) out += hit[i] ? "*" : s.charAt(i);
+    return out.replace(/\*+/g, "**");
+  }
+  function isClean(raw) { return mask(raw) === String(raw); }
   var netBtn = document.getElementById("btn-net"), chatBtn = document.getElementById("btn-chat"), chatBox = document.getElementById("chatbox"), chatLog = document.getElementById("chat-log"), chatIn = document.getElementById("chat-in");
   function peerCount() { var n = 0; for (var k in NET.peers) n++; return n; }
   function netLabel2() { var pill = document.getElementById("net-pill"); if (!pill) return; pill.textContent = NET.state === "on" ? "실제 접속 " + (peerCount() + 1) + "명" + (window.HSV_DIAG ? " / 정원 " + HSV_DIAG.cap + "명" : "") : NET.state === "off" ? "혼자" : "연결 중"; pill.classList.toggle("on", NET.state === "on"); var c2 = document.getElementById("btn-chat2"); if (c2) c2.textContent = chatBtn.textContent; }
@@ -3438,10 +3466,26 @@ window.addEventListener("error", function (e) {
     netBtn.textContent = NET.state === "on" ? "접속 " + (peerCount() + 1) + "명" : NET.state === "wait" ? "접속 확인 중" : NET.state === "retry" ? "다시 연결 중" : "혼자 플레이";
     netBtn.setAttribute("aria-pressed", NET.state === "on" ? "true" : "false");
   }
-  function chatLine(name, text, near, sys) {
-    var d = el("div", sys ? "cl sys" : "cl"); if (name) d.appendChild(el("b", null, name + (near ? " (근처)" : ""))); d.appendChild(document.createTextNode((name ? " " : "") + text));
+  function chatLine(name, text, near, sys, pid) {
+    var d = el("div", sys ? "cl sys" : "cl"); if (name) d.appendChild(el("b", null, name + (near ? " (근처)" : "")));
+    var ct = el("span", "ct", (name ? " " : "") + text); d.appendChild(ct);
+    if (pid) {
+      var rb = el("button", "cl-rep", "⚑"); rb.type = "button"; rb.title = "신고"; rb.setAttribute("aria-label", name + "님의 메시지 신고"); var arm = 0;
+      rb.addEventListener("click", function () {
+        if (!arm) { arm = 1; rb.textContent = "신고할까요?"; rb.classList.add("arm"); setTimeout(function () { if (arm === 1) { arm = 0; rb.textContent = "⚑"; rb.classList.remove("arm"); } }, 3500); return; }
+        arm = 2; reportPeer(pid, name, text); ct.textContent = " (신고한 메시지예요)"; if (rb.parentNode) rb.parentNode.removeChild(rb);
+      });
+      d.appendChild(rb);
+    }
     chatLog.appendChild(d); while (chatLog.children.length > 40) chatLog.removeChild(chatLog.firstChild); chatLog.scrollTop = chatLog.scrollHeight;
     if (chatBox.hidden && !sys) { NET.unread++; chatBtn.textContent = "채팅 " + NET.unread; }
+  }
+  NET.chatOff = hsvLoad("hsv_chatoff", 0) === 1; NET.reps = {};
+  function reportPeer(pid, nick, text) {
+    var L = hsvLoad("hsv_reports", []); if (!Array.isArray(L)) L = [];
+    L.unshift({ t: Date.now(), n: String(nick).slice(0, 8), x: String(text).slice(0, 60), id: String(pid).slice(0, 12) }); hsvSave("hsv_reports", L.slice(0, 50));
+    NET.blocked[pid] = 1; netEmit("rep", { t: String(pid) });
+    toast("신고했어요", nick + "님의 채팅과 캐릭터를 내 화면에서 숨겼어요. 메뉴의 ‘채팅 관리’에서 기록을 볼 수 있어요.");
   }
   function dropPeer(id, quiet) {
     var o = NET.peers[id]; if (!o) return;
@@ -3463,31 +3507,56 @@ window.addEventListener("error", function (e) {
       if (peerCount() >= 40) return;
       o = NET.peers[p.peer] = { g: new THREE.Group(), tag: el("div", "nick other"), bub: el("div", "bubble"), x: tx, z: tz, f: num(pr.f, -10, 10, 0), sayN: num(pr.sn, 0, 1e9, 0), bubT: 0, walk: 0, avKey: "", H: null };
       scene.add(o.g); fxHost.appendChild(o.tag); fxHost.appendChild(o.bub);
-      o.nick = cleanText(pr.n, 8) || "손님";
+      o.nick = mask(cleanText(pr.n, 8)) || "손님";
       if (Date.now() - NET.t0 > 4000) chatLine("", o.nick + "님이 들어왔어요.", false, true);
     }
     if (o.avKey !== avKey) { while (o.g.children.length) o.g.remove(o.g.children[0]); var a = makeAvatar(av); o.g.add(a); o.H = a.userData; o.avKey = avKey; }
     o.tx = tx; o.fl = pfl; o.tz = tz; o.tf = num(pr.f, -10, 10, 0); o.jy = num(pr.j, 0, 4, 0);
-    o.nick = cleanText(pr.n, 8) || "손님"; o.lv = num(pr.lv, 1, 999, 1) | 0; o.zone = cleanText(pr.zn, 20) || "마을"; o.guest = !!p.guest;
+    o.nick = mask(cleanText(pr.n, 8)) || "손님"; o.lv = num(pr.lv, 1, 999, 1) | 0; o.zone = cleanText(pr.zn, 20) || "마을"; o.guest = !!p.guest;
     var en = num(pr.en, 0, 1000, 0); if (en !== o.emN) { o.emN = en; var ek = EMOTES.map(function (e) { return e[0]; }).indexOf(pr.em) >= 0 ? pr.em : ""; if (ek) { o.emK = ek; o.emT = 3; } }
     var sn = num(pr.sn, 0, 1e9, 0);
     if (sn !== o.sayN) {
       o.sayN = sn; var text = mask(cleanText(pr.st, 60)), near = !!pr.sr;
-      if (text && !NET.blocked[p.peer] && (!near || Math.hypot(tx - player.x, tz - player.z) < 14)) { chatLine(o.nick, text, near); o.bub.textContent = text; o.bubT = 6; netLabel2(); }
+      if (text && !NET.chatOff && !NET.blocked[p.peer] && (!near || Math.hypot(tx - player.x, tz - player.z) < 14)) { chatLine(o.nick, text, near, false, p.peer); o.bub.textContent = text; o.bubT = 6; netLabel2(); }
     }
   }
   var myBub = el("div", "bubble"), myBubT = 0; fxHost.appendChild(myBub);
   function sendChat(text) {
-    text = mask(cleanText(text, 60)).trim(); if (!text) return;
-    var now = Date.now(); if (now - NET.lastSay < 1200) { toast("천천히 보내 주세요", "메시지는 1초에 한 번 보낼 수 있어요."); return; }
+    var raw = cleanText(text, 60).trim(); if (!raw) return; text = mask(raw);
+    if (text !== raw) { toast("보낼 수 없는 말이에요", "욕설이나 전화번호·링크·아이디는 보낼 수 없어요. 고운 말로 바꿔 주세요."); return; }
+    var now = Date.now(); if (text === NET.last && now - NET.lastSay < 10000) { toast("같은 말은 잠시 뒤에", "같은 메시지를 연달아 보낼 수 없어요."); return; } NET.last = text; if (now - NET.lastSay < 1200) { toast("천천히 보내 주세요", "메시지는 1초에 한 번 보낼 수 있어요."); return; }
     NET.lastSay = now; NET.sayN = (NET.sayN + 1) % 1000000; NET.st = text; NET.sr = NET.near;
     chatLine(G.av.nick || "나", text, NET.near); myBub.textContent = text; myBubT = 6;
     if (!NET.on && !NET.warned) { NET.warned = true; chatLine("", "지금은 연결되지 않아 다른 사람에게 보이지 않습니다.", false, true); }
   }
-  chatBtn.addEventListener("click", function () { chatBox.hidden = !chatBox.hidden; if (!chatBox.hidden) { NET.unread = 0; chatBtn.textContent = "채팅"; chatLog.scrollTop = chatLog.scrollHeight; } });
+  chatBtn.addEventListener("click", function () { chatBox.hidden = !chatBox.hidden; if (!chatBox.hidden && !NET.rules) { NET.rules = 1; chatLine("", "서로 존중하는 말을 써요. 욕설·전화번호·링크는 보낼 수 없고, 불편한 메시지는 ⚑로 신고할 수 있어요.", false, true); } if (!chatBox.hidden) { NET.unread = 0; chatBtn.textContent = "채팅"; chatLog.scrollTop = chatLog.scrollHeight; } });
   document.getElementById("chat-form").addEventListener("submit", function (e) { e.preventDefault(); sendChat(chatIn.value); chatIn.value = ""; });
   document.getElementById("chat-near").addEventListener("click", function () { NET.near = !NET.near; this.setAttribute("aria-pressed", NET.near ? "true" : "false"); this.textContent = NET.near ? "근처에만" : "모두에게"; });
   Array.prototype.forEach.call(document.querySelectorAll("#chat-emo button"), function (b) { b.addEventListener("click", function () { sendChat(b.textContent); }); });
+  PANEL_CHIP.chatmod = "채팅 관리";
+  EXTRA_PANELS.chatmod = function (add, rows) {
+    head("Chat Safety", "채팅 관리", "보호자·관리자용입니다. 이 설정은 이 기기에서만 적용돼요.");
+    var tg = bigBtn(NET.chatOff ? "다른 사람 채팅 받기: 꺼짐 (누르면 켜짐)" : "다른 사람 채팅 받기: 켜짐 (누르면 끔)", function () { NET.chatOff = !NET.chatOff; hsvSave("hsv_chatoff", NET.chatOff ? 1 : 0); reopen("chatmod"); }); if (NET.chatOff) tg.classList.add("on");
+    pEl("p", "tl-title", "금지어 (한 줄에 하나)");
+    var lw = pEl("label", "p-field", "지금 적용 중인 목록"), ta = el("textarea"); ta.id = "bad-ta"; ta.rows = 7; ta.value = BAD.join("\n"); lw.appendChild(ta);
+    bigBtn("금지어 저장", function () {
+      var cur = {}, list = ta.value.split(/\n+/).map(wnorm).filter(function (w) { return w; }); list.forEach(function (w) { cur[w] = 1; });
+      var def = {}; BAD_DEFAULT.forEach(function (w) { def[wnorm(w)] = 1; });
+      var addL = list.filter(function (w) { return !def[w]; }), delL = Object.keys(def).filter(function (w) { return !cur[w]; });
+      hsvSave("hsv_badwords", { add: addL, del: delL }); badRebuild(); toast("저장했어요", "금지어 " + BAD.length + "개가 적용됩니다."); reopen("chatmod");
+    });
+    bigBtn("기본 목록으로 되돌리기", function () { try { localStorage.removeItem("hsv_badwords"); } catch (e) { /* ignore */ } badRebuild(); toast("되돌렸어요", "기본 금지어 목록입니다."); reopen("chatmod"); });
+    pEl("p", "tl-title", "신고 기록 (이 기기)");
+    var L = hsvLoad("hsv_reports", []); if (!Array.isArray(L)) L = [];
+    if (!L.length) pEl("p", "p-sum", "신고한 메시지가 없습니다.");
+    L.slice(0, 20).forEach(function (r) { var d = new Date(r.t); pEl("p", "p-body", (d.getMonth() + 1) + "/" + d.getDate() + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0") + " · " + r.n + " : " + r.x); });
+    if (L.length) {
+      bigBtn("기록 복사 (담당자에게 전달)", function () { var txt = L.map(function (r) { return new Date(r.t).toLocaleString("ko-KR") + " " + r.n + ": " + r.x; }).join("\n"); try { navigator.clipboard.writeText(txt).then(function () { toast("복사했어요", "교회 담당자에게 붙여넣어 전달하세요."); }, function () { toast("복사하지 못했어요", "브라우저가 복사를 막았습니다."); }); } catch (e) { toast("복사하지 못했어요", "브라우저가 복사를 막았습니다."); } });
+      bigBtn("기록 비우기", function () { try { localStorage.removeItem("hsv_reports"); } catch (e) { /* ignore */ } reopen("chatmod"); });
+    }
+    var bl = Object.keys(NET.blocked); pEl("p", "tl-title", "내가 숨긴 사람: " + bl.length + "명");
+    pEl("p", "p-sum", "숨긴 사람은 ‘접속 현황’에서 다시 풀 수 있습니다. 서버가 없어서 한 사람의 신고만으로 다른 사람의 화면에서 지울 수는 없고, 서로 다른 3명이 신고하면(접속자가 적으면 2명) 각자의 화면에서 자동으로 숨겨집니다.");
+  };
   netBtn.addEventListener("click", function () { if (!mode) openPanel("net"); });
   PANEL_CHIP.net = "접속 현황";
   EXTRA_PANELS.net = function (add, rows) {
@@ -3500,6 +3569,7 @@ window.addEventListener("error", function (e) {
       var b = bigBtn(o.nick + " · Lv." + o.lv + " · " + o.zone + (o.guest ? " · 초대 손님" : "") + (NET.blocked[id] ? " — 차단 해제" : " — 차단"), function () { if (NET.blocked[id]) delete NET.blocked[id]; else NET.blocked[id] = 1; reopen("net"); });
       b.style.textAlign = "left";
     });
+    bigBtn("채팅 관리 · 신고 기록 · 금지어", function () { openPanel("chatmod"); });
     pEl("p", "tl-title", "공간별 인원");
     rows(Object.keys(zc).map(function (k) { return [k, zc[k] + "명"]; }));
     pEl("p", "p-sum", "여기 보이는 사람은 모두 지금 이 페이지를 열고 있는 실제 이용자입니다. 차단하면 그 사람의 캐릭터와 채팅이 내 화면에서 사라집니다.");
@@ -3963,6 +4033,7 @@ window.addEventListener("error", function (e) {
     var s = season(), t = clock;
     if (!netHooked && NET.room) {
       netHooked = true;
+      NET.room.on("rep", function (m) { if (m.sameTab || !m.data) return; var t = cleanText(m.data.t, 40); if (!t) return; var set = NET.reps[t] || (NET.reps[t] = {}); set[m.peer] = 1; var n = Object.keys(set).length, need = peerCount() <= 3 ? 2 : 3; if (n >= need && !NET.blocked[t]) { NET.blocked[t] = 1; var po = NET.peers[t]; if (po) chatLine("", "여러 명이 신고한 " + po.nick + "님의 채팅을 숨겼어요. 접속 현황에서 풀 수 있어요.", false, true); } }, function () {});
       NET.room.on("snow", function (m) { if (!m.sameTab && !NET.blocked[m.peer]) addRemoteSnowman(m.data); }, function () {});
       NET.room.on("throw", function (m) { if (m.sameTab || NET.blocked[m.peer] || !m.data) return; var d = m.data; spawnBall(num(d.x, WORLD.x0, WORLD.x1, 0), num(d.y, -10, 60, 0), num(d.z, WORLD.z0, WORLD.z1, 0), num(d.dx, -1, 1, 0), num(d.dz, -1, 1, 0), false); }, function () {});
       NET.room.on("bbq", function (m) { if (m.sameTab || NET.blocked[m.peer]) return; var o = peerByMsg(m); if (o) { pop("맛있게 드세요!", o.x, groundH(o.x, o.z) + 2.3, o.z); toast("바비큐 파티", o.nick + "님이 음식을 나눠 줬어요."); } }, function () {});
@@ -5668,7 +5739,7 @@ window.addEventListener("error", function (e) {
     return { open: open, close: close, state: S, roll: roll, totals: totals };
   })();
   if (/[?&]diag=hansarang\b/.test(location.search)) window.__bowl = BOWL;
-  if (/[?&]diag=hansarang\b/.test(location.search)) { window.__van = function () { return VAN; }; window.__tickers = tickers; window.__drive = function () { enterVan(); }; window.__tp = function (x, z, y, f) { player.x = x; player.z = z; player.y = y || 0; player.face = f || 0; cam.yaw = player.face; snapCam = true; }; window.__geo = { SANCT: SANCT, Y2: Y2 }; window.__scene = scene; window.__cam = camera; window.__T = THREE; window.__race = { start: startRace, back: backToTown, get R() { return RACE; }, get VAN() { return VAN; }, applyVeh: function (i) { return applyVeh(i); } }; window.__av = function (k, v) { G.av[k] = v; rebuildAvatar(); }; window.__lead = function (i) { leadSpeak(i); return LEAD[i] ? LEAD[i].length : 0; }; }
+  if (/[?&]diag=hansarang\b/.test(location.search)) { window.__van = function () { return VAN; }; window.__tickers = tickers; window.__drive = function () { enterVan(); }; window.__tp = function (x, z, y, f) { player.x = x; player.z = z; player.y = y || 0; player.face = f || 0; cam.yaw = player.face; snapCam = true; }; window.__geo = { SANCT: SANCT, Y2: Y2 }; window.__scene = scene; window.__cam = camera; window.__T = THREE; window.__race = { start: startRace, back: backToTown, get R() { return RACE; }, get VAN() { return VAN; }, applyVeh: function (i) { return applyVeh(i); } }; window.__av = function (k, v) { G.av[k] = v; rebuildAvatar(); }; window.__lead = function (i) { leadSpeak(i); return LEAD[i] ? LEAD[i].length : 0; }; window.__chat = { mask: mask, clean: isClean, line: chatLine, send: sendChat, report: reportPeer, NET: NET, peers: function () { return NET.peers; } }; }
   EXTRA_ACTIONS.bowling = function () {
     var d = new Date(), day = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
     if (G.bowlVisit !== day) { G.bowlVisit = day; saveG(); gain(10, 10); }
@@ -6947,7 +7018,7 @@ window.addEventListener("error", function (e) {
     [["day", "낮"], ["dusk", "노을"], ["night", "밤"]].forEach(function (t) { mbtn(r2, t[1], function () { document.getElementById("t-" + t[0]).click(); buildMenu(); }, curTod === t[0]); });
     mbtn(r2, "눈", function () { document.getElementById("btn-snow").click(); buildMenu(); }, snowing);
     var r3 = el("div", "mrow"); menu.appendChild(r3);
-    mbtn(r3, "계절 · " + (document.getElementById("btn-season").textContent || ""), click("btn-season")); mbtn(r3, "음악", click("btn-bgm")); mbtn(r3, "접속 현황", click("btn-net")); if (coarse && navigator.vibrate) mbtn(r3, "진동", function () { var o = window.__haptic && window.__haptic(localStorage.getItem("hsv_haptic") === "0"); toast("진동", o ? "켰어요." : "껐어요."); }); mbtn(r3, "그래픽", function () { toggleMenu(false); openPanel("gfx"); }); mbtn(r3, "GLB 시험", function () { toggleMenu(false); openPanel("glb"); }); mbtn(r3, "퀘스트 · 패스", function () { toggleMenu(false); openPanel("quest"); }); mbtn(r3, "스타렉스 타기", function () { toggleMenu(false); if (mode) return; VAN.x = -18; VAN.z = 25.85; VAN.h = -Math.PI / 2; VAN.v = 0; vanPose(0); fadeTo(function () { enterVan(); }); });
+    mbtn(r3, "계절 · " + (document.getElementById("btn-season").textContent || ""), click("btn-season")); mbtn(r3, "음악", click("btn-bgm")); mbtn(r3, "접속 현황", click("btn-net")); mbtn(r3, "채팅 관리", function () { toggleMenu(false); openPanel("chatmod"); }); if (coarse && navigator.vibrate) mbtn(r3, "진동", function () { var o = window.__haptic && window.__haptic(localStorage.getItem("hsv_haptic") === "0"); toast("진동", o ? "켰어요." : "껐어요."); }); mbtn(r3, "그래픽", function () { toggleMenu(false); openPanel("gfx"); }); mbtn(r3, "GLB 시험", function () { toggleMenu(false); openPanel("glb"); }); mbtn(r3, "퀘스트 · 패스", function () { toggleMenu(false); openPanel("quest"); }); mbtn(r3, "스타렉스 타기", function () { toggleMenu(false); if (mode) return; VAN.x = -18; VAN.z = 25.85; VAN.h = -Math.PI / 2; VAN.v = 0; vanPose(0); fadeTo(function () { enterVan(); }); });
     menu.appendChild(el("div", "msec", "이동과 정보"));
     DEST.filter(function (d) { return d.n.charAt(0) !== "T"; }).forEach(function (d) { var b = el("button", "menu-item"); b.type = "button"; b.appendChild(el("span", null, d.n)); b.appendChild(el("small", null, "이동")); b.addEventListener("click", function () { toggleMenu(false); teleport(d); }); menu.appendChild(b); });
     [["오늘의 퀘스트 · 출석", "daily"], ["새가족 안내", "guide"], ["사진 앨범", "album"]].forEach(function (m) { var b = el("button", "menu-item", m[0]); b.type = "button"; b.addEventListener("click", function () { toggleMenu(false); openPanel(m[1]); }); menu.appendChild(b); });
