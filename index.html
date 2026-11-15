@@ -2203,7 +2203,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-1723", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-1727", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -4420,7 +4420,18 @@ window.addEventListener("error", function (e) {
     adBoard(-6, 81.25, 24, 0); adBoard(-15.5, 68.75, 8, 0); adBoard(4, 68.75, 6, 0);
     addRect(-18, 6, 81.2, 81.3);
     // floodlight towers (light panels glow at night)
-    [[-21.5, 67.6], [9.4, 67.6], [-21.5, 84.4], [9.4, 84.4]].forEach(function (p) { cyl(p[0], y0 + 4.5, p[1], 0.12, 0.16, 9, M_steel, 8); addCircle(p[0], p[1], 0.25); var hd = box(p[0], y0 + 9.2, p[1], 1.4, 0.8, 0.2, std(0x2a2c30)); hd.lookAt(-6, y0, 75); box(p[0], y0 + 9.2, p[1], 1.2, 0.6, 0.22, new THREE.MeshBasicMaterial({ color: 0xfff6dc }), { cast: false }).lookAt(-6, y0, 75); var gs = glowSprite(p[0], y0 + 9.2, p[1], 3.2, 0xfff2cc); gs.material.opacity = 0.55; });
+    var FLH = [];
+    [[-21.5, 67.6], [9.4, 67.6], [-21.5, 84.4], [9.4, 84.4]].forEach(function (p) { cyl(p[0], y0 + 4.5, p[1], 0.12, 0.16, 9, M_steel, 8); addCircle(p[0], p[1], 0.25); var hd = box(p[0], y0 + 9.2, p[1], 1.4, 0.8, 0.2, std(0x2a2c30)); FLH.push(hd); hd.lookAt(-6, y0, 75); box(p[0], y0 + 9.2, p[1], 1.2, 0.6, 0.22, new THREE.MeshBasicMaterial({ color: 0xfff6dc }), { cast: false }).lookAt(-6, y0, 75); var gs = glowSprite(p[0], y0 + 9.2, p[1], 3.2, 0xfff2cc); gs.material.opacity = 0.55; });
+    if (THREE.GLTFLoader && location.protocol !== "file:") try {
+      new THREE.GLTFLoader().load(ASSET("floodhead.glb?v=1"), function (gl) { // Blender: 6-panel LED floodlight heads with frame + service ladder
+        gl.scene.traverse(function (o) { if (o.isMesh && /fl_lamp/.test(o.material.name)) { o.material.emissive = new THREE.Color(0xfff6e0); EMISSIVE_NIGHT.push(o.material); } });
+        FLH.forEach(function (hd, i) { var c = i ? gl.scene.clone(true) : gl.scene; c.position.copy(hd.position); scene.add(c); c.lookAt(-6, y0, 75); hd.visible = false; hd.children.forEach(function (ch) { ch.visible = false; }); });
+      });
+      new THREE.GLTFLoader().load(ASSET("goalnet.glb?v=1"), function (gl) { // Blender: knotted net + back stanchions on the west goal
+        gl.scene.position.set(-19.7, y0, 75); gl.scene.rotation.y = Math.PI; scene.add(gl.scene);
+        scene.children.forEach(function (o) { if (o.isMesh && o.geometry && o.geometry.type === "PlaneGeometry" && Math.abs(o.position.x + 20.5) < 0.05 && Math.abs(o.position.z - 75) < 0.05) o.visible = false; });
+      });
+    } catch (e) { /* keep code parts */ }
     // second goal at the west end
     cyl(-19.7, y0 + 1.1, 72.5, 0.07, 0.07, 2.2, M.white, 8); cyl(-19.7, y0 + 1.1, 77.5, 0.07, 0.07, 2.2, M.white, 8); box(-19.7, y0 + 2.2, 75, 0.12, 0.12, 5.1, M.white); addCircle(-19.7, 72.5, 0.2); addCircle(-19.7, 77.5, 0.2);
     plane(5, 2.2, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.18, side: THREE.DoubleSide }), -20.5, y0 + 1.1, 75, { rx: 0, ry: Math.PI / 2, receive: false });
