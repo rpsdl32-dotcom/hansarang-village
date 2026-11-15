@@ -2291,7 +2291,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-2300", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-2301", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -2962,8 +2962,8 @@ window.addEventListener("error", function (e) {
       var cx = dx / len, cy = dy / len, dev = 0; for (var j = 1; j < pts.length - 1; j++) { var cr = cx * (pts[j][1] - f.y0) - cy * (pts[j][0] - f.x0); if (Math.abs(cr) > Math.abs(dev)) dev = cr; }
       var cv = Math.abs(dev) < len * 0.07 ? 0 : -Math.sign(dev) * Math.min(1, Math.abs(dev) / (len * 0.2)); S.curve = Math.round(cv * 10) / 10;
       ui.querySelectorAll("[data-c]").forEach(function (x) { x.classList.toggle("on", Math.sign(+x.dataset.c) === Math.sign(S.curve)); });
-      S.power = clamp(0.3 + (spd - 0.5) * 0.35, 0.3, 1); S.flick = true;
-      flash(S.power > 0.82 ? "풀파워!" : S.power < 0.45 ? "살짝" : "슛!", 500); release();
+      S.power = clamp(0.35 + (spd - 0.5) * 0.3, 0.35, 0.86); S.flick = true; // capped just above the 'overhit' zone so a fast flick is strong, not random
+      flash(S.power > 0.78 ? "강슛!" : S.power < 0.45 ? "살짝" : "슛!", 500); release();
     }, true);
     window.addEventListener("keydown", function (e) {
       if (!S.on) return; var k = e.key.toLowerCase();
