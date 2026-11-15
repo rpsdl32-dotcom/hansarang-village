@@ -2203,7 +2203,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-1727", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-1732", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -5290,10 +5290,15 @@ window.addEventListener("error", function (e) {
       var mon = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.6), new THREE.MeshBasicMaterial({ map: monitorTex })); mon.position.set(laneX(PLAY), 3.0, 2.5); mon.rotation.y = Math.PI; mon.rotation.x = -0.25; add(mon);
       bx(laneX(PLAY), 3.0, 2.53, 2.5, 0.68, 0.06, mat(0x111111));
       // seating, ball return, ball rack, shoe counter
-      for (var j = 0; j < NL; j++) { var sx = laneX(j); bx(sx, 0.25, -4.2, 1.6, 0.5, 0.6, mat(0xe14b6a, { roughness: 0.6 })); bx(sx, 0.6, -4.5, 1.6, 0.7, 0.15, mat(0xe14b6a, { roughness: 0.6 })); bx(sx + 0.92, 0.35, -2.2, 0.35, 0.7, 1.2, mat(0x3a3f55)); }
+      var RETB = [];
+      for (var j = 0; j < NL; j++) { var sx = laneX(j); bx(sx, 0.25, -4.2, 1.6, 0.5, 0.6, mat(0xe14b6a, { roughness: 0.6 })); bx(sx, 0.6, -4.5, 1.6, 0.7, 0.15, mat(0xe14b6a, { roughness: 0.6 })); RETB.push(bx(sx + 0.92, 0.35, -2.2, 0.35, 0.7, 1.2, mat(0x3a3f55))); }
       var rack = bx(-W / 2 + 0.7, 0.6, -6.5, 0.6, 1.2, 3, mat(0x2a2f45));
       BALLS.forEach(function (b, k) { var m = new THREE.Mesh(new THREE.SphereGeometry(RB, 32, 20), ballMatFor(b.c)); m.position.set(-W / 2 + 0.75, 1.32, -7.6 + k * 0.55); add(m); });
       bx(W / 2 - 1.4, 0.55, -7.5, 2.2, 1.1, 0.8, mat(0x8a5a36)); var shoe = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 0.5), new THREE.MeshBasicMaterial({ map: textTex(512, 128, "#ffd23f", "#14203d", ["신발 대여 · SHOES"], 54) })); shoe.position.set(W / 2 - 1.4, 2.0, -7.95); add(shoe);
+      if (THREE.GLTFLoader && location.protocol !== "file:") try { // Blender: ball-return hoods (2 balls on the rails) + pinsetter masking units over every pin deck
+        new THREE.GLTFLoader().load(ASSET("ballret.glb?v=1"), function (gl) { gl.scene.traverse(function (o) { if (o.isMesh && /bo_led/.test(o.material.name)) o.material.emissiveIntensity = 1.2; }); for (var j = 0; j < NL; j++) { var c = gl.scene.clone(true); c.position.set(laneX(j) + 0.92, 0, -2.2); c.rotation.y = Math.PI; add(c); } RETB.forEach(function (m) { m.visible = false; }); });
+        new THREE.GLTFLoader().load(ASSET("pinset.glb?v=1"), function (gl) { for (var j = 0; j < NL; j++) { var c = gl.scene.clone(true); c.position.set(laneX(j), 0, LANE + 0.75); add(c); } });
+      } catch (e) { /* keep boxes */ }
       // lighting: ceiling strips + pin deck spots
       var stripM = new THREE.MeshBasicMaterial({ color: 0xfff6e6 });
       for (var z = -6; z < LANE; z += 4) bx(0, 4.08, z, W - 1, 0.04, 0.25, stripM);
