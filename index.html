@@ -1449,7 +1449,7 @@ window.addEventListener("error", function (e) {
   box(-25.2, C2.y0 + 1.7, C2.z1 + 0.06, 2.4, 1.05, 0.04, M.darkGlass, { cast: false });
   box(-28.2, C2.y0 + 1.6, C2.z1 + 0.06, 0.85, 1.55, 0.04, M.darkGlass, { cast: false });
   box(C2.x1 + 0.03, C2.y0 + 1.7, -5, 0.06, 1.1, 1.6, M.darkGlass, { cast: false });
-  var CAFE_ROOF = [];
+  var CAFE_ROOF = [], CAFE_LAMPGLOW = null;
   (function roof() {
     var span = C2.x1 - C2.x0, half = span / 2 + 0.5, pitch = 0.55, rise = (span / 2) * Math.tan(pitch);
     var len = half / Math.cos(pitch), depth = C2.z1 - C2.z0 + 1.0, top = C2.y0 + C2.h, cx = (C2.x0 + C2.x1) / 2, cz = (C2.z0 + C2.z1) / 2;
@@ -2159,13 +2159,13 @@ window.addEventListener("error", function (e) {
      same room API the game already uses (presence / onPeers / emit / on),
      so every multiplayer feature works for anyone with the link.
      ============================================================ */
-  var HSV_SUPA = { url: "https://mdrrthfpdzjqrxfrojwf.supabase.co", key: "eyJ...2ACNQKsFkF6vuwoPsNH7p3yLZdfucu7uOU9c6lQBIRY", roomSize: 30 };
+  var HSV_SUPA = { url: "https://mdrrthfpdzjqrxfrojwf.supabase.co", key: "", roomSize: 30 };
   var PUBLIC_MODE = /^https:\/\/.+\.supabase\.co/.test(HSV_SUPA.url) && HSV_SUPA.key.length > 20;
   if (PUBLIC_MODE) (function () {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1114-2318", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1114-2323", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -5860,11 +5860,11 @@ window.addEventListener("error", function (e) {
     // a few outdoor chairs on the balcony
     [[-29.0, -0.6], [-23.9, -0.8]].forEach(function (p) { var cx = cafeX(p[0]); p = [p[0], cafeZ(p[1])]; [[-0.18, -0.18], [0.18, -0.18], [-0.18, 0.18], [0.18, 0.18]].forEach(function (o) { box(cx + o[0], CAFE2.y + 0.22, p[1] + o[1], 0.04, 0.44, 0.04, std(0x2a2a2a), { cast: false }); }); box(cx, CAFE2.y + 0.45, p[1], 0.45, 0.05, 0.45, std(0xd86a7a, { roughness: 0.6 }), { cast: false }); box(cx, CAFE2.y + 0.72, p[1] - 0.2, 0.45, 0.5, 0.05, std(0xd86a7a, { roughness: 0.6 }), { cast: false }); colliders.circles.push({ x: cx, z: p[1], r: 0.3, lv: 1 }); });
     // 1F-roof balcony: black rail along the front, like the night photo
-    var railY = CF.h + 0.3;
-    box((CF.x0 + CF.x1) / 2, railY + 1.0, CF.z1 - 0.15, CF.x1 - CF.x0 - 0.2, 0.05, 0.05, lampM, { cast: false });
-    box((CF.x0 + CF.x1) / 2, railY + 0.55, CF.z1 - 0.15, CF.x1 - CF.x0 - 0.2, 0.03, 0.03, lampM, { cast: false });
-    for (var rx = CF.x0 + 0.2; rx <= CF.x1 - 0.2; rx += 1.8) box(rx, railY + 0.5, CF.z1 - 0.15, 0.05, 1.0, 0.05, lampM, { cast: false });
-    [CF.x0 + 0.12, CF.x1 - 0.12].forEach(function (x) { box(x, railY + 1.0, (C2.z1 + CF.z1) / 2, 0.05, 0.05, CF.z1 - C2.z1, lampM, { cast: false }); box(x, railY + 0.5, CF.z1 - 0.15, 0.05, 1.0, 0.05, lampM, { cast: false }); });
+    var railY = CF.h + 0.3, OLDRAIL = [];
+    OLDRAIL.push(box((CF.x0 + CF.x1) / 2, railY + 1.0, CF.z1 - 0.15, CF.x1 - CF.x0 - 0.2, 0.05, 0.05, lampM, { cast: false }));
+    OLDRAIL.push(box((CF.x0 + CF.x1) / 2, railY + 0.55, CF.z1 - 0.15, CF.x1 - CF.x0 - 0.2, 0.03, 0.03, lampM, { cast: false }));
+    for (var rx = CF.x0 + 0.2; rx <= CF.x1 - 0.2; rx += 1.8) OLDRAIL.push(box(rx, railY + 0.5, CF.z1 - 0.15, 0.05, 1.0, 0.05, lampM, { cast: false }));
+    [CF.x0 + 0.12, CF.x1 - 0.12].forEach(function (x) { OLDRAIL.push(box(x, railY + 1.0, (C2.z1 + CF.z1) / 2, 0.05, 0.05, CF.z1 - C2.z1, lampM, { cast: false })); OLDRAIL.push(box(x, railY + 0.5, CF.z1 - 0.15, 0.05, 1.0, 0.05, lampM, { cast: false })); });
     // ---- night look: warm interior glow behind the glass, wall sconces, brighter lamps
     var warm = new THREE.MeshBasicMaterial({ color: 0xffcf8a, transparent: true, opacity: 0.0, depthWrite: false });
     var glows = [];
@@ -5873,12 +5873,18 @@ window.addEventListener("error", function (e) {
     glows.push(plane(3.0, 1.1, warm, (C2.x0 + C2.x1) / 2, C2.y0 + 1.6, C2.z1 + 0.13, { rx: 0 }));
     var scM = std(0xffffff, { emissive: 0xfff0c8, emissiveIntensity: 0.0 }), sconces = [];
     [C2.x0 + 1.6, C2.x1 - 1.6].forEach(function (x) { var sm = box(x, C2.y0 + 2.45, C2.z1 + 0.14, 0.32, 0.18, 0.1, scM, { cast: false }); sconces.push(sm); });
+    if (THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load("cafedetail.glb?v=1", function (gl) { // Blender: 3-rail black balcony railing + 2 wall lamps (photo)
+      gl.scene.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; if (o.material && o.material.name === "lampglow") { CAFE_LAMPGLOW = o.material; CAFE_LAMPGLOW.emissiveIntensity = (curTod === "night" ? 1 : curTod === "dusk" ? 0.6 : 0) * 2.2; } } });
+      gl.scene.position.set((CF.x0 + CF.x1) / 2, railY, CF.z1 - 0.15); scene.add(gl.scene);
+      OLDRAIL.forEach(function (m) { m.visible = false; }); sconces.forEach(function (m) { m.visible = false; });
+      if (window.HSV_DIAG) HSV_DIAG.cafeDetail = true;
+    }); } catch (e) { /* keep code rail */ }
     var nightL = new THREE.PointLight(0xffc880, 0.0, 14, 1.6); nightL.position.set((CF.x0 + CF.x1) / 2, 2.0, CF.z1 + 1.5); scene.add(nightL);
     // clear the trees crowding the cafe entrance and surroundings (user request): pines, round trees and bare trees in this area
     var CLR = { x0: -48, x1: -14.5, z0: -17, z1: 9 }, zero = new THREE.Matrix4().makeScale(0, 0, 0);
     [pTrunk, pc1, pc2, pc3].forEach(function (im) { if (!im) return; var hit = false; for (var i = 0; i < im.count; i++) { im.getMatrixAt(i, mtx); mtx.decompose(pos, q, sc); if (pos.x > CLR.x0 && pos.x < CLR.x1 && pos.z > CLR.z0 && pos.z < CLR.z1) { im.setMatrixAt(i, zero); hit = true; } } if (hit) im.instanceMatrix.needsUpdate = true; });
     if (typeof rtrees !== "undefined") rtrees.forEach(function (t) { if (t.x > CLR.x0 && t.x < CLR.x1 && t.z > CLR.z0 && t.z < CLR.z1) t.s = 0; });
-    tickers.push(function () { var n = curTod === "night" ? 1 : curTod === "dusk" ? 0.6 : 0; if (warm.opacity === n * 0.55) return; warm.opacity = n * 0.55; scM.emissiveIntensity = n * 1.6; globeM.emissiveIntensity = n * 1.4; nightL.intensity = n * 1.2; });
+    tickers.push(function () { var n = curTod === "night" ? 1 : curTod === "dusk" ? 0.6 : 0; if (warm.opacity === n * 0.55) return; warm.opacity = n * 0.55; scM.emissiveIntensity = n * 1.6; globeM.emissiveIntensity = n * 1.4; if (CAFE_LAMPGLOW) CAFE_LAMPGLOW.emissiveIntensity = n * 2.2; nightL.intensity = n * 1.2; });
   })();
   function zoneAt(x, z) { for (var i = 0; i < ZONES.length; i++) { var Z = ZONES[i]; if (x >= Z.x0 && x <= Z.x1 && z >= Z.z0 && z <= Z.z1) return Z; } return null; }
 
