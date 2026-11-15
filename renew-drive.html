@@ -2291,7 +2291,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-2257", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-2300", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -2940,22 +2940,23 @@ window.addEventListener("error", function (e) {
     window.addEventListener("pointermove", function (e) { if (!drag) return; var k = 6 / Math.max(320, Math.min(innerWidth, innerHeight)); S.aimZ = clamp(drag.z0 + (e.clientX - drag.x) * k, -3.6, 3.6); S.aimY = clamp(drag.y0 - (e.clientY - drag.y) * k, 0.1, 3.2); }, true);
     window.addEventListener("pointerup", function () { drag = null; }, true);
     // --- FLICK SHOT (phones): swipe up toward the spot you want. End point = aim, swipe speed = power, bulge of the swipe = curve.
+    function fkLog(r) { if (window.__fkd) window.__fkd.push(r); }
     var fk = null, fkRay = new THREE.Raycaster(), fkPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), GX), fkHit = new THREE.Vector3(), fkNdc = new THREE.Vector2();
     canvas.addEventListener("pointerdown", function (e) { if (!S.on) { fk = null; return; } fk = { x0: e.clientX, y0: e.clientY, t0: performance.now(), pts: [[e.clientX, e.clientY, performance.now()]], id: e.pointerId }; }, true);
     window.addEventListener("pointermove", function (e) { if (fk && e.pointerId === fk.id) { fk.pts.push([e.clientX, e.clientY, performance.now()]); if (fk.pts.length > 40) fk.pts.shift(); } }, true);
     window.addEventListener("pointerup", function (e) {
-      if (!fk || e.pointerId !== fk.id) return; var f = fk; fk = null; if (!S.on) return;
+      if (!fk || e.pointerId !== fk.id) { fkLog("nofk"); return; } var f = fk; fk = null; if (!S.on) return;
       var now = performance.now(), dx = e.clientX - f.x0, dy = e.clientY - f.y0, len = Math.hypot(dx, dy), dur = now - f.t0;
-      if (dur > 700 || len < 55) return;
+      if (dur > 700 || len < 55) { fkLog("short " + Math.round(dur) + " " + Math.round(len)); return; }
       // speed over the last ~90 ms of the gesture
       var pts = f.pts, a = pts[pts.length - 1]; for (var i = pts.length - 1; i >= 0; i--) { if (a[2] - pts[i][2] >= 90) { a = pts[i]; break; } if (i === 0) a = pts[0]; }
       var b = pts[pts.length - 1], dtm = Math.max(16, b[2] - a[2]), spd = Math.hypot(b[0] - a[0], b[1] - a[1]) / dtm; // px per ms
       if (S.turn === "keep" && (S.phase === "runup" || S.phase === "flight")) { // swipe to dive
         if (len < 45) return; var dz = dx > 40 ? 1 : dx < -40 ? -1 : 0, hi = dy < -35 ? 1 : 0; if (!dz && !hi) hi = 0; dive(dz, hi); return;
       }
-      if (S.turn !== "kick" || S.phase !== "aim" || dy > -40) return;
+      if (S.turn !== "kick" || S.phase !== "aim" || dy > -40) { fkLog("state " + S.turn + S.phase + dy); return; }
       fkNdc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); camera.updateMatrixWorld(); fkRay.setFromCamera(fkNdc, camera);
-      if (!fkRay.ray.intersectPlane(fkPlane, fkHit)) return;
+      if (!fkRay.ray.intersectPlane(fkPlane, fkHit)) { fkLog("noplane"); return; }
       S.aimZ = clamp(fkHit.z - GZ, -2.35, 2.35); S.aimY = clamp(fkHit.y - Y0, 0.15, 2.1);
       // curve from the bulge of the path
       var cx = dx / len, cy = dy / len, dev = 0; for (var j = 1; j < pts.length - 1; j++) { var cr = cx * (pts[j][1] - f.y0) - cy * (pts[j][0] - f.x0); if (Math.abs(cr) > Math.abs(dev)) dev = cr; }
