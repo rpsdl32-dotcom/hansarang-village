@@ -2203,7 +2203,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-1732", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-1734", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -4279,7 +4279,12 @@ window.addEventListener("error", function (e) {
     box(-10.65, Y + 0.6, cz, 0.04, 0.04, W, M_nose, { cast: false });
     [[0.4, -10.4], [0.2, -10.0]].forEach(function (s) { box(s[1], Y + s[0] / 2, cz, 0.4, s[0], 4.2, M_maroon, { cast: false }); box(s[1] + 0.2, Y + s[0], cz, 0.03, 0.03, 4.2, M_nose, { cast: false }); });
     // acrylic pulpits (stage + floor), four grey chairs, palms in white pots
-    function pulpit(x, y, h) { box(x, y + h / 2, cz, 0.55, h, 0.9, M_acryl, { cast: false }); box(x + 0.29, y + h * 0.55, cz, 0.01, 0.35, 0.05, M.gold, { cast: false }); box(x + 0.29, y + h * 0.62, cz, 0.01, 0.05, 0.22, M.gold, { cast: false }); box(x, y + h + 0.02, cz, 0.7, 0.03, 1.0, M_acryl, { cast: false }); }
+    var PUL = [];
+    function pulpit(x, y, h) { var ms = [box(x, y + h / 2, cz, 0.55, h, 0.9, M_acryl, { cast: false }), box(x + 0.29, y + h * 0.55, cz, 0.01, 0.35, 0.05, M.gold, { cast: false }), box(x + 0.29, y + h * 0.62, cz, 0.01, 0.05, 0.22, M.gold, { cast: false }), box(x, y + h + 0.02, cz, 0.7, 0.03, 1.0, M_acryl, { cast: false })]; PUL.push({ x: x, y: y, h: h, ms: ms }); }
+    if (THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load(ASSET("pulpit.glb?v=1"), function (gl) { // Blender: clear acrylic pulpit (side fins, slanted desk, lit edges, gold cross, bible) - still acrylic as in the photo
+      gl.scene.traverse(function (o) { if (o.isMesh && /pu_acrylic|pu_edge/.test(o.material.name)) { o.material.transparent = true; o.material.opacity = /edge/.test(o.material.name) ? 0.8 : 0.42; o.material.depthWrite = false; } });
+      PUL.forEach(function (p, i) { var c = i ? gl.scene.clone(true) : gl.scene; c.position.set(p.x, p.y, cz); c.scale.y = p.h / 1.15; scene.add(c); p.ms.forEach(function (m) { if (m) m.visible = false; }); });
+    }); } catch (e) { /* keep boxes */ }
     pulpit(-11.4, Y + 0.6, 1.1); pulpit(-9.35, Y, 1.15); addCircle(-9.35, cz, 0.5);
     // angled front corner walls (as in the photo): fabric panels with wood frames, holding 기도 / 전도
     [[cz + 6.2, -1], [cz - 6.2, 1]].forEach(function (a) {
