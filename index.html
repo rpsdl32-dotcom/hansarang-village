@@ -782,6 +782,9 @@ window.addEventListener("error", function (e) {
 
   var occluders = [];
   var colliders = { rects: [], circles: [] };
+  // assets (GLB / video / photos) live on GitHub Pages; elsewhere (artifact preview) load them from there by absolute URL
+  var ASSET_BASE = /github\.io$/.test(location.hostname) ? "" : "https://rpsdl32-dotcom.github.io/hansarang-village/";
+  function ASSET(p) { return /^(https?:|data:|blob:)/.test(p) ? p : ASSET_BASE + p; }
   var CAFE_DX = -5; // Asher Cafe sits 5 m further west than first built: a parking strip lies between the cafe and the church (user-confirmed)
   // the cafe footprint is also enlarged 1.4x (x and depth, heights unchanged) around its front-east corner, to match the real interior size
   var CAFE_S = 1.4, CAFE_PX = -20 + CAFE_DX, CAFE_PZ = 0.5;
@@ -1809,7 +1812,7 @@ window.addEventListener("error", function (e) {
   (function loadSedanGLB() {
     if (!THREE.GLTFLoader || location.protocol === "file:") return;
     try {
-      new THREE.GLTFLoader().load("sedan.glb?v=1", function (gl) {
+      new THREE.GLTFLoader().load(ASSET("sedan.glb?v=1"), function (gl) {
         var src = gl.scene, paintCache = {};
         src.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; if (o.material && o.material.name === "Glass") { o.material.roughness = 0.05; o.material.envMapIntensity = 1.6; } } });
         SEDANS.forEach(function (g) {
@@ -2165,7 +2168,7 @@ window.addEventListener("error", function (e) {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1115-1027", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1115-1035", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) { if (window.supabase) return res(); var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"; s.onload = function () { res(); }; s.onerror = function () { err("라이브러리 로드 실패", "jsdelivr"); rej(); }; document.head.appendChild(s); setTimeout(function () { if (!window.supabase) { err("연결 시간 초과", "라이브러리"); } }, 12000); }); }
@@ -2476,6 +2479,15 @@ window.addEventListener("error", function (e) {
   var ball = new THREE.Mesh(soccerGeo(0.18), ballMat); ball.castShadow = true; scene.add(ball);
   function resetBall() { ball.position.set(-1.2, Y0 + 0.2, 75); keeper.position.z = 75; }
   resetBall();
+  /* confetti burst for goals (pooled points, auto-hides) */
+  var confetti = (function () {
+    var N = 260, geo = new THREE.BufferGeometry(), pos = new Float32Array(N * 3), col = new Float32Array(N * 3), vel = new Float32Array(N * 3);
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3)); geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+    var pts = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.16, vertexColors: true, toneMapped: false })); pts.visible = false; pts.frustumCulled = false; scene.add(pts);
+    var t = 0, pal = [[0.12, 0.31, 0.85], [0.84, 0.94, 0.24], [0.95, 0.42, 0.11], [1, 1, 1]];
+    tickers.push(function (dt) { if (!pts.visible) return; t -= dt; for (var i = 0; i < N; i++) { vel[i * 3 + 1] -= 6 * dt; vel[i * 3] *= 0.985; vel[i * 3 + 2] *= 0.985; pos[i * 3] += vel[i * 3] * dt; pos[i * 3 + 1] = Math.max(Y0 + 0.02, pos[i * 3 + 1] + vel[i * 3 + 1] * dt); pos[i * 3 + 2] += vel[i * 3 + 2] * dt; } geo.attributes.position.needsUpdate = true; if (t <= 0) pts.visible = false; });
+    return function (x, z) { for (var i = 0; i < N; i++) { pos[i * 3] = x; pos[i * 3 + 1] = Y0 + 2.4; pos[i * 3 + 2] = z + (Math.random() - 0.5) * 4; vel[i * 3] = -2 - Math.random() * 5; vel[i * 3 + 1] = 3 + Math.random() * 6; vel[i * 3 + 2] = (Math.random() - 0.5) * 7; var c = pal[i % 4]; col[i * 3] = c[0]; col[i * 3 + 1] = c[1]; col[i * 3 + 2] = c[2]; } geo.attributes.color.needsUpdate = true; t = 3.5; pts.visible = true; };
+  })();
   /* ===== OLSC LED BOARDS: real video + photo playlist on a 16:9 screen (config below) ===== */
   var OLSC_BOARD_CONFIG = {
     // edit this list to change what plays; type "video" plays to the end (or sec), "image" shows for sec
@@ -2511,17 +2523,17 @@ window.addEventListener("error", function (e) {
     board(12.4, 75, -Math.PI / 2, 8, 5.7, [-2.6, 2.6]);   // main: behind the east goal, above the score board (seen in the shoot-out)
     board(-24.6, 75, -Math.PI / 2, 3.2, 1.2, [-1.0, 1.0]); // second: outside the west terrace, facing people walking up
     var vid = document.createElement("video"); vid.muted = true; vid.loop = false; vid.playsInline = true; vid.setAttribute("playsinline", ""); vid.setAttribute("webkit-playsinline", ""); vid.crossOrigin = "anonymous"; vid.preload = "metadata";
-    var imgs = {}, poster = new Image(); poster.src = OLSC_BOARD_CONFIG.poster;
+    var imgs = {}, poster = new Image(); poster.crossOrigin = "anonymous"; poster.src = ASSET(OLSC_BOARD_CONFIG.poster);
     var st = { i: -1, t0: 0, loading: false, failed: false, sound: false, active: false, last: 0, item: null };
     var PL = OLSC_BOARD_CONFIG.playlist;
-    function img(src) { if (!imgs[src]) { var im = new Image(); im.src = src; imgs[src] = im; } return imgs[src]; }
+    function img(src) { if (!imgs[src]) { var im = new Image(); im.crossOrigin = "anonymous"; im.src = ASSET(src); imgs[src] = im; } return imgs[src]; }
     function next() {
       st.i = (st.i + 1) % PL.length; st.item = PL[st.i]; st.t0 = performance.now(); st.failed = false;
       if (PL[(st.i + 1) % PL.length].type === "image") img(PL[(st.i + 1) % PL.length].src);
       if (st.item.type === "video") {
         st.loading = true; vid.innerHTML = "";
-        var a = document.createElement("source"); a.src = st.item.webm; a.type = "video/webm";
-        var b = document.createElement("source"); b.src = st.item.mp4; b.type = "video/mp4";
+        var a = document.createElement("source"); a.src = ASSET(st.item.webm); a.type = "video/webm";
+        var b = document.createElement("source"); b.src = ASSET(st.item.mp4); b.type = "video/mp4";
         // Safari (iPhone) plays mp4 more reliably, so offer it first there
         if (/iP(hone|ad|od)|Safari/.test(navigator.userAgent) && !/Chrome|Android/.test(navigator.userAgent)) { vid.appendChild(b); vid.appendChild(a); } else { vid.appendChild(a); vid.appendChild(b); }
         vid.load(); var p = vid.play(); if (p && p.catch) p.catch(function () { st.failed = true; st.loading = false; });
@@ -2549,8 +2561,10 @@ window.addEventListener("error", function (e) {
       g.fillStyle = "#d6f03c"; g.font = '600 22px "IBM Plex Sans KR", sans-serif'; g.fillText(OLSC_BOARD_CONFIG.lines[2], 250, CH - 32);
       g.textAlign = "right"; g.fillStyle = "rgba(255,255,255,.75)"; g.font = '500 20px "IBM Plex Sans KR", sans-serif';
       g.fillText(it && it.type === "video" ? (st.sound ? "🔊 소리 켜짐 · 화면을 누르면 끔" : "🔇 화면을 누르면 소리 켜기") : (st.i + 1) + " / " + PL.length, CW - 40, CH - 40);
+      if (st.fx && now < st.fx.until) { var k2 = 1 - (st.fx.until - now) / 2600; g.fillStyle = st.fx.bg; g.globalAlpha = 0.78; g.fillRect(0, 0, CW, CH - 150); g.globalAlpha = 1; g.textAlign = "center"; g.fillStyle = "#fff"; g.font = '900 ' + Math.round(170 + Math.sin(now / 90) * 12) + 'px "IBM Plex Sans KR", sans-serif'; g.fillText(st.fx.t, CW / 2, CH / 2 - 10); if (st.fx.sub) { g.font = '700 40px "IBM Plex Sans KR", sans-serif'; g.fillStyle = "#d6f03c"; g.fillText(st.fx.sub, CW / 2, CH / 2 + 60); } }
       tex.needsUpdate = true;
     }
+    window.__boardFx = function (t, bg, sub) { st.fx = { t: t, bg: bg || "#1f4fd8", sub: sub || "", until: performance.now() + 2600 }; };
     var v3 = new THREE.Vector3(), fr = new THREE.Frustum(), pm = new THREE.Matrix4();
     function visible() {
       if (document.hidden) return false;
@@ -2567,7 +2581,7 @@ window.addEventListener("error", function (e) {
       if (st.item && st.item.type === "video" && st.failed && now - st.t0 > 5000) next();
       if (st.item && st.item.type === "video" && st.item.sec && now - st.t0 > st.item.sec * 1000) next();
       var mobile = matchMedia("(pointer:coarse)").matches;
-      if (now - st.last < (mobile ? 50 : 33)) return; st.last = now; draw(now);
+      if (now - st.last < (mobile ? 40 : 0)) return; st.last = now; draw(now);
       edgeM.color.setHSL(0.6, 1, 0.45 + Math.sin(now / 900) * 0.1);
     });
     // tap/click the screen to toggle sound (a real user gesture, as browsers require)
@@ -2826,6 +2840,12 @@ window.addEventListener("error", function (e) {
       var mine = S.turn === "kick";
       flash(goal ? (mine ? "골!!" : "실점") : why === "save" ? (mine ? "막혔다!" : "선방!!") : why === "post" ? "골대!" : "빗나감", 1500);
       if ((goal && mine) || (!goal && !mine)) { SFX.play("goal"); if (typeof STAD !== "undefined") STAD.cheer = 2.5; } else SFX.play("fail");
+      // juice: streaks, LED board, confetti, camera kick
+      if (mine) { S.streak = goal ? (S.streak || 0) + 1 : 0; }
+      var good = (goal && mine) || (!goal && !mine);
+      if (window.__boardFx) window.__boardFx(goal ? (mine ? "GOAL!" : "실점") : why === "save" ? (mine ? "SAVED" : "선방!") : why === "post" ? "골대!" : "MISS", good ? "#1f4fd8" : "#b3261e", mine && goal && S.streak > 1 ? S.streak + "연속 골! 🔥" : "");
+      if (good) { S.shake = 0.35; if (typeof confetti === "function") confetti(goal ? 7.6 : 7.2, 75); if (STAD) STAD.cheer = 3.2; }
+      if (mine && goal && S.streak > 1) setTimeout(function () { flash(S.streak + "연속 골! 🔥", 1200); }, 900);
       setScore(); setTimeout(nextTurn, 1700);
     }
     function nextTurn() {
@@ -4134,7 +4154,7 @@ window.addEventListener("error", function (e) {
     cyl(-11.3, Y + 1.95, cz, 0.01, 0.01, 0.35, M_blk, 4, { cast: false });
     var stChairs = [], stZ = [cz - 2.4, cz - 1.7, cz + 1.7, cz + 2.4];
     stZ.forEach(function (z) { stChairs.push(box(-13.0, Y + 1.05, z, 0.55, 0.12, 0.55, std(0x5a5e66, { roughness: 0.7 })), box(-13.27, Y + 1.4, z, 0.08, 0.65, 0.55, std(0x5a5e66, { roughness: 0.7 })), box(-13.0, Y + 1.12, z, 0.45, 0.04, 0.45, M_whiteP, { cast: false })); });
-    if (THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load("stagechair.glb?v=1", function (gl) {
+    if (THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load(ASSET("stagechair.glb?v=1"), function (gl) {
       gl.scene.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
       stZ.forEach(function (z) { var c = gl.scene.clone(true); c.position.set(-13.05, Y + 0.6, z); scene.add(c); });
       stChairs.forEach(function (m) { if (m) m.visible = false; });
@@ -4142,7 +4162,7 @@ window.addEventListener("error", function (e) {
     [cz - 3.0, cz + 3.0].forEach(function (z) { cyl(-13.1, Y + 1.0, z, 0.2, 0.16, 0.8, M_whiteP, 12); for (var k = 0; k < 7; k++) { var lf = new THREE.Mesh(new THREE.ConeGeometry(0.06, 1.1, 4), M.plant); lf.position.set(-13.1, Y + 1.8, z); lf.rotation.set(Math.cos(k) * 0.9, 0, Math.sin(k * 1.7) * 0.9); scene.add(lf); } });
     // grand piano (right front) and band corner extras (left front)
     (function () { var px = -9.3, pz = Z0 + 2.9, g = new THREE.Group(); var body = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.32, 1.45), M_blk); body.position.y = 0.85; g.add(body); var tail = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.72, 0.32, 20, 1, false, 0, Math.PI), M_blk); tail.position.set(-0.75, 0.85, 0); tail.rotation.y = Math.PI / 2; g.add(tail); var lid = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.03, 1.4), M_blk); lid.position.set(-0.3, 1.45, -0.35); lid.rotation.x = 0.7; g.add(lid); var keys = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.04, 1.3), M.white); keys.position.set(0.85, 0.98, 0); g.add(keys); [[-1.1, 0], [0.6, 0.55], [0.6, -0.55]].forEach(function (c) { var lg = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.7, 0.1), M_blk); lg.position.set(c[0], 0.35, c[1]); g.add(lg); }); g.position.set(px, Y, pz); g.rotation.y = Math.PI; scene.add(g); addRect(px - 1.6, px + 1.0, pz - 0.8, pz + 0.8);
-      if (THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load("piano.glb?v=1", function (gl) { gl.scene.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; if (/Black/.test(o.material.name)) o.material.envMapIntensity = 1.4; } }); for (var i = g.children.length - 1; i >= 0; i--) g.remove(g.children[i]); g.add(gl.scene); }); } catch (e) { /* keep box piano */ }
+      if (THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load(ASSET("piano.glb?v=1"), function (gl) { gl.scene.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; if (/Black/.test(o.material.name)) o.material.envMapIntensity = 1.4; } }); for (var i = g.children.length - 1; i >= 0; i--) g.remove(g.children[i]); g.add(gl.scene); }); } catch (e) { /* keep box piano */ }
     })();
     (function bandCorner() { // left-front band corner, after the photo
       var py = Y + 0.22, bx = -10.0, zA = Z1 - 1.0, M_k = std(0x18181a, { roughness: 0.35 }), M_key = std(0xf2f2f0, { roughness: 0.4 }), M_box = std(0xc8a274, { roughness: 0.9 }), M_cab = std(0x0e0e10, { roughness: 0.6 });
@@ -4191,7 +4211,7 @@ window.addEventListener("error", function (e) {
     }); });
     [seat, back, shelf, ends, endsB].forEach(function (m) { m.instanceMatrix.needsUpdate = true; m.castShadow = true; m.receiveShadow = true; scene.add(m); });
     // Blender pews (pew.glb): body parts stretch along each block, shaped end panels at both ends
-    if (THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load("pew.glb?v=2", function (gl) {
+    if (THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load(ASSET("pew.glb?v=2"), function (gl) {
       var parts = []; gl.scene.traverse(function (o) { if (o.isMesh) parts.push(o); }); if (!parts.length) return;
       var mm = new THREE.Matrix4(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1);
       parts.forEach(function (o) {
@@ -5919,7 +5939,7 @@ window.addEventListener("error", function (e) {
     CAFE2.x0 = sx(CAFE2.x0); CAFE2.x1 = sx(CAFE2.x1); CAFE2.sx0 = sx(CAFE2.sx0); CAFE2.sx1 = sx(CAFE2.sx1); CAFE2.z0 = sz(CAFE2.z0); CAFE2.z1 = sz(CAFE2.z1); CAFE2.sz0 = sz(CAFE2.sz0); CAFE2.sz1 = sz(CAFE2.sz1);
     ZONES.forEach(function (z) { if (z.id === "cafe") { z.x0 = CI.x0; z.x1 = CI.x1; z.z0 = CI.z0; z.z1 = CI.z1; } });
     // Blender cafe roof (caferoof.glb): corrugated dark tiles, ridge cap, white fascia + soffits; built at the final (scaled) size
-    if (THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load("caferoof.glb?v=2", function (gl) {
+    if (THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load(ASSET("caferoof.glb?v=2"), function (gl) {
       var top = C2.y0 + C2.h, cx = (C2.x0 + C2.x1) / 2, cz = (C2.z0 + C2.z1) / 2;
       gl.scene.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
       gl.scene.position.set(cx, top, cz); scene.add(gl.scene);
@@ -5980,13 +6000,13 @@ window.addEventListener("error", function (e) {
     glows.push(plane(3.0, 1.1, warm, (C2.x0 + C2.x1) / 2, C2.y0 + 1.6, C2.z1 + 0.13, { rx: 0 }));
     var scM = std(0xffffff, { emissive: 0xfff0c8, emissiveIntensity: 0.0 }), sconces = [];
     [C2.x0 + 1.6, C2.x1 - 1.6].forEach(function (x) { var sm = box(x, C2.y0 + 2.45, C2.z1 + 0.14, 0.32, 0.18, 0.1, scM, { cast: false }); sconces.push(sm); });
-    if (THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load("cafedetail.glb?v=2", function (gl) { // Blender: 3-rail black balcony railing + 2 wall lamps (photo)
+    if (THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load(ASSET("cafedetail.glb?v=2"), function (gl) { // Blender: 3-rail black balcony railing + 2 wall lamps (photo)
       gl.scene.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; if (o.material && o.material.name === "lampglow") { CAFE_LAMPGLOW = o.material; CAFE_LAMPGLOW.emissiveIntensity = (curTod === "night" ? 1 : curTod === "dusk" ? 0.6 : 0) * 2.2; } } });
       gl.scene.position.set(cafeX(-25.5), railY, CF.z1 - 0.15); gl.scene.scale.set(CAFE_S, 1, CAFE_S); scene.add(gl.scene); // follow the 1.4x plan enlargement
       OLDRAIL.forEach(function (m) { m.visible = false; }); sconces.forEach(function (m) { m.visible = false; });
       if (window.HSV_DIAG) HSV_DIAG.cafeDetail = true;
     }); } catch (e) { /* keep code rail */ }
-    if (THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load("cafefront.glb?v=1", function (gl) { // Blender: dark slatted roll blinds on the 1F glass (night photo)
+    if (THREE.GLTFLoader && location.protocol !== "file:") try { new THREE.GLTFLoader().load(ASSET("cafefront.glb?v=1"), function (gl) { // Blender: dark slatted roll blinds on the 1F glass (night photo)
       gl.scene.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
       gl.scene.position.set(cafeX(-25.5), 0, CF.z1); gl.scene.scale.set(CAFE_S, 1, CAFE_S); scene.add(gl.scene);
       if (window.HSV_DIAG) HSV_DIAG.cafeFront = true;
