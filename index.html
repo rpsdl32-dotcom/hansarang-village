@@ -68,6 +68,9 @@ body {
 #stamps { min-width: 0; padding: 7px 10px; }
 #stamps .head { gap: 8px; }
 #lv { margin-top: 3px; }
+.msec-h { appearance: none; display: block; width: 100%; box-sizing: border-box; margin: 4px 0 0; padding: 9px 10px; font: inherit; font-size: 13px; font-weight: 700; text-align: left; color: inherit; background: rgba(255,255,255,0.08); border: 0; border-radius: 10px; cursor: pointer; min-height: 40px; }
+.msec-b { padding: 2px 0 4px; }
+.mrow .btn.hot { background: #f2c230; color: #2a1d00; font-weight: 800; border-color: #f2c230; }
 .msec { font-size: 10.5px; letter-spacing: 0.12em; opacity: 0.6; padding: 8px 8px 2px; }
 .mrow { display: flex; gap: 4px; padding: 2px 4px; flex-wrap: wrap; }
 .mrow .btn { min-height: 30px; padding: 4px 8px; font-size: 12px; flex: 1 1 auto; }
@@ -2312,12 +2315,13 @@ window.addEventListener("error", function (e) {
      so every multiplayer feature works for anyone with the link.
      ============================================================ */
   var HSV_SUPA = { url: "https://mdrrthfpdzjqrxfrojwf.supabase.co", key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kcnJ0aGZwZHpqcXJ4ZnJvandmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ1NzAyMTMsImV4cCI6MjExMDE0NjIxM30.2ACNQKsFkF6vuwoPsNH7p3yLZdfucu7uOU9c6lQBIRY", roomSize: 30 };
+  var BUILD_ID = "1121-0120";
   var PUBLIC_MODE = /^https:\/\/.+\.supabase\.co/.test(HSV_SUPA.url) && HSV_SUPA.key.length > 20;
   if (PUBLIC_MODE) (function () {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1119-0007", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1121-0120", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) {
@@ -3228,7 +3232,7 @@ window.addEventListener("error", function (e) {
   }
   var quiz = { i: 0, score: 0 };
   newQuiz();
-  var PANEL_CHIP = { teen: "중고등부", hiel: "HIEL 청년부", foru: "For U", olsc: "OLSC", verse: "오늘의 말씀", npc: "마을지기", map: "지도", missions: "미션", shop: "상점", avatar: "아바타" };
+  var PANEL_CHIP = { ctrl: "조작", coach: "안내", teen: "중고등부", hiel: "HIEL 청년부", foru: "For U", olsc: "OLSC", verse: "오늘의 말씀", npc: "마을지기", map: "지도", missions: "미션", shop: "상점", avatar: "아바타" };
   function pEl(tag, cls, text) { var e = el(tag, cls, text); panelBody.appendChild(e); return e; }
   function head(en, title, sum) { pEl("div", "p-en", en); pEl("h2", null, title); if (sum) pEl("p", "p-sum", sum); }
   function bigBtn(text, fn) { var b = pEl("button", "p-btn", text); b.type = "button"; b.addEventListener("click", fn); return b; }
@@ -5174,6 +5178,21 @@ window.addEventListener("error", function (e) {
     AUTOQ.low = fps < (GFX.level === 3 ? 18 : 24) ? AUTOQ.low + 1 : 0; // at '최고' only a really slow device (<18fps) steps down
     if (AUTOQ.low >= 3 && GFX.level > 0) { GFX.level--; applyGfx(); AUTOQ.low = 0; toast("화질을 자동으로 낮췄어요", "평균 " + Math.round(fps) + "fps라서 '" + ["절약", "보통", "고화질", "최고"][GFX.level] + "'으로 바꿨어요. 메뉴 → 그래픽에서 바꿀 수 있어요."); }
   });
+  function sensRow(label, key, min, max, step, fmt) {
+    var l = pEl("label", "p-field", label + " · " + fmt(SENS[key])), r = el("input"); r.type = "range"; r.min = String(min); r.max = String(max); r.step = String(step); r.value = String(SENS[key]);
+    r.addEventListener("input", function () { SENS[key] = Number(r.value); l.firstChild.nodeValue = label + " · " + fmt(SENS[key]); saveSens(); });
+    l.appendChild(r);
+  }
+  EXTRA_PANELS.ctrl = function (add, rows) {
+    head("Controls", "조작 설정", "손에 맞게 조절하세요. 이 기기에만 저장돼요. 화면을 끌면서 바로 느껴 보세요.");
+    sensRow("카메라 감도", "cam", 0.5, 2, 0.05, function (v) { return v.toFixed(2) + "배"; });
+    sensRow("조이스틱 반응", "stick", 0.7, 1.6, 0.05, function (v) { return v.toFixed(2) + "배"; });
+    sensRow("조이스틱 둔감 영역", "dead", 0, 0.25, 0.01, function (v) { return Math.round(v * 100) + "%"; });
+    if (coarse && navigator.vibrate) { var hv = true; try { hv = localStorage.getItem("hsv_haptic") !== "0"; } catch (e) { /* ignore */ } var hb = bigBtn("진동: " + (hv ? "켜짐" : "꺼짐"), function () { var o = window.__haptic && window.__haptic(localStorage.getItem("hsv_haptic") === "0"); hb.textContent = "진동: " + (o ? "켜짐" : "꺼짐"); }); }
+    bigBtn("기본값으로 되돌리기", function () { SENS.cam = 1; SENS.stick = 1; SENS.dead = 0.08; saveSens(); reopen("ctrl"); });
+    bigBtn("조작 안내 다시 보기", function () { closePanel(); setTimeout(function () { showCoach(true); }, 200); });
+    pEl("p", "p-sum", "버전 " + BUILD_ID);
+  };
   EXTRA_PANELS.gfx = function (add, rows) {
     head("Graphics", "그래픽 설정", "휴대폰이 뜨겁거나 끊기면 '절약'을, 컴퓨터에서는 '고화질'을 고르세요. 이 기기에만 저장돼요.");
     pEl("p", "tl-title", "화질");
@@ -7125,13 +7144,16 @@ window.addEventListener("error", function (e) {
   });
   window.addEventListener("keyup", function (e) { keys[e.key.toLowerCase()] = false; });
   window.addEventListener("blur", function () { keys = {}; });
+  var SENS = { cam: 1, stick: 1, dead: 0.08 };
+  try { var sj = JSON.parse(localStorage.getItem("hsv_sens") || "null"); if (sj) { SENS.cam = Math.max(0.5, Math.min(2, Number(sj.cam) || 1)); SENS.stick = Math.max(0.7, Math.min(1.6, Number(sj.stick) || 1)); SENS.dead = Math.max(0, Math.min(0.25, isNaN(Number(sj.dead)) ? 0.08 : Number(sj.dead))); } } catch (e) { /* storage unavailable */ }
+  function saveSens() { try { localStorage.setItem("hsv_sens", JSON.stringify(SENS)); } catch (e) { /* ignore */ } }
   var drag = null;
   canvas.addEventListener("pointerdown", function (e) { drag = { id: e.pointerId, x: e.clientX, y: e.clientY }; try { canvas.setPointerCapture(e.pointerId); } catch (er) { /* ignore */ } canvas.focus({ preventScroll: true }); });
   canvas.addEventListener("pointermove", function (e) {
     if (!drag || drag.id !== e.pointerId) return;
     var ddx = e.clientX - drag.x, ddy = e.clientY - drag.y;
-    if (mode) { look.yaw = clamp(look.yaw - ddx * 0.004, -1.2, 1.2); look.pitch = clamp(look.pitch - ddy * 0.003, -0.4, 0.45); }
-    else { cam.yaw -= ddx * 0.0055; cam.pitch = clamp(cam.pitch + ddy * 0.004, -0.15, 1.15); }
+    if (mode) { look.yaw = clamp(look.yaw - ddx * 0.004 * SENS.cam, -1.2, 1.2); look.pitch = clamp(look.pitch - ddy * 0.003 * SENS.cam, -0.4, 0.45); }
+    else { cam.yaw -= ddx * 0.0055 * SENS.cam; cam.pitch = clamp(cam.pitch + ddy * 0.004 * SENS.cam, -0.15, 1.15); }
     drag.x = e.clientX; drag.y = e.clientY;
   });
   function endDrag(e) { if (drag && drag.id === e.pointerId) drag = null; }
@@ -7141,7 +7163,7 @@ window.addEventListener("error", function (e) {
   function stickMove(e) {
     var r = stick.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
     var ddx = e.clientX - cx, ddy = e.clientY - cy, d = Math.sqrt(ddx * ddx + ddy * ddy) || 1, k = Math.min(1, d / stickR);
-    joy.x = ddx / d * k; joy.y = -ddy / d * k; joy.m = k;
+    var kk2 = k < SENS.dead ? 0 : Math.min(1, (k - SENS.dead) / (1 - SENS.dead) * SENS.stick); joy.x = ddx / d * kk2; joy.y = -ddy / d * kk2; joy.m = kk2;
     knob.style.transform = "translate(" + (ddx / d * k * stickR) + "px," + (ddy / d * k * stickR) + "px)";
   }
   stick.addEventListener("pointerdown", function (e) { stickId = e.pointerId; try { stick.setPointerCapture(e.pointerId); } catch (er) { /* ignore */ } stickMove(e); });
@@ -7280,27 +7302,54 @@ window.addEventListener("error", function (e) {
   ];
   function mbtn(row, label, fn, on) { var b = el("button", "btn", label); b.type = "button"; if (on) b.setAttribute("aria-pressed", "true"); b.addEventListener("click", fn); row.appendChild(b); return b; }
   function click(id) { return function () { toggleMenu(false); document.getElementById(id).click(); }; }
+  var MENU_OPEN = { play: true, me: false, env: false, go: false, more: false };
+  function msection(key, title, fill) {
+    var h = el("button", "msec-h", (MENU_OPEN[key] ? "▾ " : "▸ ") + title); h.type = "button"; h.setAttribute("aria-expanded", MENU_OPEN[key] ? "true" : "false");
+    h.addEventListener("click", function () { MENU_OPEN[key] = !MENU_OPEN[key]; buildMenu(); }); menu.appendChild(h);
+    if (MENU_OPEN[key]) { var box = el("div", "msec-b"); menu.appendChild(box); fill(box); }
+  }
+  function mitem(box, label, fn, dim) { var b = el("button", "menu-item", label); b.type = "button"; if (dim) b.style.opacity = "0.75"; b.addEventListener("click", fn); box.appendChild(b); return b; }
+  function mpanel(kind, pre) { return function () { toggleMenu(false); if (pre) pre(); openPanel(kind); }; }
   function buildMenu() {
     menu.textContent = "";
-    menu.appendChild(el("div", "msec", "놀이"));
-    var r1 = el("div", "mrow"); menu.appendChild(r1);
-    mbtn(r1, "미션", click("btn-mission")); mbtn(r1, "상점", click("btn-shop")); mbtn(r1, "오늘", function () { toggleMenu(false); openPanel("daily"); }); mbtn(r1, "코믹", function () { document.getElementById("btn-comic").click(); buildMenu(); }, comic);
-    menu.appendChild(el("div", "msec", "환경"));
-    var r2 = el("div", "mrow"); menu.appendChild(r2);
-    [["day", "낮"], ["dusk", "노을"], ["night", "밤"]].forEach(function (t) { mbtn(r2, t[1], function () { document.getElementById("t-" + t[0]).click(); buildMenu(); }, curTod === t[0]); });
-    mbtn(r2, "눈", function () { document.getElementById("btn-snow").click(); buildMenu(); }, snowing);
-    var r3 = el("div", "mrow"); menu.appendChild(r3);
-    mbtn(r3, "계절 · " + (document.getElementById("btn-season").textContent || ""), click("btn-season")); mbtn(r3, "음악", click("btn-bgm")); mbtn(r3, "접속 현황", click("btn-net")); mbtn(r3, "채팅 관리", function () { toggleMenu(false); openPanel("chatmod"); }); mbtn(r3, "이어하기 코드", function () { toggleMenu(false); openPanel("resume"); }); mbtn(r3, "말씀 외우기", function () { toggleMenu(false); MEM.v = -1; openPanel("mem"); }); mbtn(r3, "주간 랭킹", function () { toggleMenu(false); openPanel("rank"); }); mbtn(r3, "퀴즈 대결", function () { toggleMenu(false); openPanel("duel"); }); mbtn(r3, "이번 주 미션", function () { toggleMenu(false); openPanel("weekly"); }); if (coarse && navigator.vibrate) mbtn(r3, "진동", function () { var o = window.__haptic && window.__haptic(localStorage.getItem("hsv_haptic") === "0"); toast("진동", o ? "켰어요." : "껐어요."); }); mbtn(r3, "그래픽", function () { toggleMenu(false); openPanel("gfx"); }); mbtn(r3, "GLB 시험", function () { toggleMenu(false); openPanel("glb"); }); mbtn(r3, "퀘스트 · 패스", function () { toggleMenu(false); openPanel("quest"); }); mbtn(r3, "스타렉스 타기", function () { toggleMenu(false); if (mode) return; VAN.x = -18; VAN.z = 25.85; VAN.h = -Math.PI / 2; VAN.v = 0; vanPose(0); fadeTo(function () { enterVan(); }); });
-    menu.appendChild(el("div", "msec", "이동과 정보"));
-    DEST.filter(function (d) { return d.n.charAt(0) !== "T"; }).forEach(function (d) { var b = el("button", "menu-item"); b.type = "button"; b.appendChild(el("span", null, d.n)); b.appendChild(el("small", null, "이동")); b.addEventListener("click", function () { toggleMenu(false); teleport(d); }); menu.appendChild(b); });
-    [["오늘의 퀘스트 · 출석", "daily"], ["새가족 안내", "guide"], ["사진 앨범", "album"]].forEach(function (m) { var b = el("button", "menu-item", m[0]); b.type = "button"; b.addEventListener("click", function () { toggleMenu(false); openPanel(m[1]); }); menu.appendChild(b); });
-    if (G.bulletin) { var bl = el("button", "menu-item", "주보 다시 보기"); bl.type = "button"; bl.addEventListener("click", function () { toggleMenu(false); openPanel("bulletin"); }); menu.appendChild(bl); }
-    var ad = el("button", "menu-item", "운영자 설정"); ad.type = "button"; ad.addEventListener("click", function () { toggleMenu(false); openPanel("admin"); }); menu.appendChild(ad);
-    var av = el("button", "menu-item", "아바타 꾸미기"); av.type = "button"; av.addEventListener("click", function () { toggleMenu(false); openCreator(); }); menu.appendChild(av);
-    var fs = el("button", "menu-item", "전체 화면"); fs.type = "button"; fs.addEventListener("click", function () { toggleMenu(false); try { var d = document.documentElement; if (document.fullscreenElement) document.exitFullscreen(); else if (d.requestFullscreen) d.requestFullscreen().catch(function () { toast("전체 화면", "이 화면에서는 전체 화면을 쓸 수 없어요."); }); } catch (e) { /* ignore */ } }); menu.appendChild(fs);
-    var reset = el("button", "menu-item", "도장 모두 비우기"); reset.type = "button"; reset.style.opacity = "0.75";
-    reset.addEventListener("click", function () { visited = []; saveVisited(); paintStamps(); toggleMenu(false); });
-    menu.appendChild(reset);
+    var top = el("div", "mrow"); menu.appendChild(top);
+    var wk = mbtn(top, "★ 이번 주 미션", mpanel("weekly")); wk.classList.add("hot");
+    mbtn(top, "조작 설정", mpanel("ctrl"));
+    msection("play", "놀이", function (box) {
+      var r1 = el("div", "mrow"); box.appendChild(r1);
+      mbtn(r1, "미션", click("btn-mission")); mbtn(r1, "상점", click("btn-shop")); mbtn(r1, "오늘", mpanel("daily")); mbtn(r1, "코믹", function () { document.getElementById("btn-comic").click(); buildMenu(); }, comic);
+      var r1b = el("div", "mrow"); box.appendChild(r1b);
+      mbtn(r1b, "말씀 외우기", mpanel("mem", function () { MEM.v = -1; })); mbtn(r1b, "퀴즈 대결", mpanel("duel")); mbtn(r1b, "주간 랭킹", mpanel("rank")); mbtn(r1b, "퀘스트 · 패스", mpanel("quest"));
+      mbtn(r1b, "스타렉스 타기", function () { toggleMenu(false); if (mode) return; VAN.x = -18; VAN.z = 25.85; VAN.h = -Math.PI / 2; VAN.v = 0; vanPose(0); fadeTo(function () { enterVan(); }); });
+    });
+    msection("me", "내 기록", function (box) {
+      mitem(box, "아바타 꾸미기", function () { toggleMenu(false); openCreator(); });
+      mitem(box, "오늘의 퀘스트 · 출석", mpanel("daily"));
+      mitem(box, "사진 앨범", mpanel("album"));
+      if (G.bulletin) mitem(box, "주보 다시 보기", mpanel("bulletin"));
+      mitem(box, "이어하기 코드 (다른 폰으로 옮기기)", mpanel("resume"));
+      mitem(box, "도장 모두 비우기", function () { visited = []; saveVisited(); paintStamps(); toggleMenu(false); }, true);
+    });
+    msection("env", "환경 · 설정", function (box) {
+      var r2 = el("div", "mrow"); box.appendChild(r2);
+      [["day", "낮"], ["dusk", "노을"], ["night", "밤"]].forEach(function (t) { mbtn(r2, t[1], function () { document.getElementById("t-" + t[0]).click(); buildMenu(); }, curTod === t[0]); });
+      mbtn(r2, "눈", function () { document.getElementById("btn-snow").click(); buildMenu(); }, snowing);
+      var r3 = el("div", "mrow"); box.appendChild(r3);
+      mbtn(r3, "계절 · " + (document.getElementById("btn-season").textContent || ""), click("btn-season")); mbtn(r3, "음악", click("btn-bgm")); mbtn(r3, "그래픽", mpanel("gfx")); mbtn(r3, "조작 설정", mpanel("ctrl"));
+      if (coarse && navigator.vibrate) mbtn(r3, "진동", function () { var o = window.__haptic && window.__haptic(localStorage.getItem("hsv_haptic") === "0"); toast("진동", o ? "켰어요." : "껐어요."); });
+      mbtn(r3, "접속 현황", click("btn-net")); mbtn(r3, "채팅 관리", mpanel("chatmod"));
+      mitem(box, "전체 화면", function () { toggleMenu(false); try { var d = document.documentElement; if (document.fullscreenElement) document.exitFullscreen(); else if (d.requestFullscreen) d.requestFullscreen().catch(function () { toast("전체 화면", "이 화면에서는 전체 화면을 쓸 수 없어요."); }); } catch (e) { /* ignore */ } });
+    });
+    msection("go", "이동", function (box) {
+      DEST.filter(function (d) { return d.n.charAt(0) !== "T"; }).forEach(function (d) { var b = el("button", "menu-item"); b.type = "button"; b.appendChild(el("span", null, d.n)); b.appendChild(el("small", null, "이동")); b.addEventListener("click", function () { toggleMenu(false); teleport(d); }); box.appendChild(b); });
+    });
+    msection("more", "안내 · 운영", function (box) {
+      mitem(box, "새가족 안내", mpanel("guide"));
+      mitem(box, "조작 안내 다시 보기", function () { toggleMenu(false); showCoach(true); });
+      mitem(box, "운영자 설정", mpanel("admin"));
+      mitem(box, "GLB 시험", mpanel("glb"), true);
+    });
+    menu.appendChild(el("div", "msec", "버전 " + BUILD_ID));
   }
   function toggleMenu(force) { var open = typeof force === "boolean" ? force : menu.hidden; if (open) buildMenu(); menu.hidden = !open; btnPlaces.setAttribute("aria-expanded", open ? "true" : "false"); }
   btnPlaces.addEventListener("click", function () { toggleMenu(); });
@@ -7725,6 +7774,7 @@ window.addEventListener("error", function (e) {
       G.made = true; G.guest = true; saveG(); rebuildAvatar();
     }
     $("#intro").style.display = "none"; started = true; canvas.focus({ preventScroll: true }); curZone = null; updateAct(); onStart();
+    if (how !== "tour" && how !== "avatar") setTimeout(function () { try { showCoach(false); } catch (e) { /* ignore */ } }, 2600);
     if (how === "avatar") setTimeout(openCreator, 300);
     else if (how === "tour") setTimeout(startTour, 300);
     else if (G.guest) setTimeout(function () { toast("환영해요, " + G.av.nick + "님!", "게스트로 입장했어요. 메뉴 → 아바타 꾸미기에서 이름과 모습을 바꿀 수 있어요."); }, 900);
@@ -7734,6 +7784,49 @@ window.addEventListener("error", function (e) {
   $("#go-tour").addEventListener("click", function () { enterWorld("tour"); });
   $("#go-friends").addEventListener("click", function () { started || enterWorld("go"); setTimeout(function () { openPanel("friends"); }, 350); });
   setTimeout(function () { try { go.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 50);
+
+  /* ===== first-visit coach: 4 short cards (move / look / act / menu). Shown once; menu -> 조작 안내 다시 보기 replays it. ===== */
+  var COACH_STEPS = coarse ? [
+    ["1 / 4 · 걷기", "왼쪽 아래 둥근 조이스틱을 밀어 보세요. 끝까지 밀면 달려요.", "stick"],
+    ["2 / 4 · 둘러보기", "화면의 빈 곳을 손가락으로 끌면 시점이 돌아가요. 두 손가락으로 벌리면 가까이 보여요.", null],
+    ["3 / 4 · 하기", "건물이나 사람 가까이 가면 오른쪽에 버튼이 떠요. 눌러서 들어가고 말을 걸어 보세요.", null],
+    ["4 / 4 · 메뉴", "오른쪽 위 메뉴에서 '★ 이번 주 미션'을 눌러 보세요. 조작이 어려우면 '조작 설정'에서 감도를 바꿀 수 있어요.", "menu"]
+  ] : [
+    ["1 / 4 · 걷기", "W A S D로 걷고 Shift를 누르면 달려요. Space는 점프예요.", null],
+    ["2 / 4 · 둘러보기", "마우스를 끌면 시점이 돌아가고, 휠로 가까이·멀리 볼 수 있어요.", null],
+    ["3 / 4 · 하기", "건물이나 사람 가까이 가면 안내가 떠요. E 키로 들어가고 말을 걸어 보세요.", null],
+    ["4 / 4 · 메뉴", "오른쪽 위 메뉴에서 '★ 이번 주 미션'을 눌러 보세요. '조작 설정'에서 감도도 바꿀 수 있어요.", "menu"]
+  ];
+  var coachEl = null;
+  function coachDone() { try { localStorage.setItem("hsv_coach", "1"); } catch (e) { /* ignore */ } if (coachEl) { coachEl.remove(); coachEl = null; } }
+  function showCoach(force, i) {
+    if (!force) { try { if (localStorage.getItem("hsv_coach") === "1") return; } catch (e) { /* ignore */ } }
+    i = i || 0; if (coachEl) coachEl.remove();
+    var st = COACH_STEPS[i]; if (!st) { coachDone(); return; }
+    coachEl = el("div", "glass"); coachEl.id = "coach"; coachEl.setAttribute("role", "dialog"); coachEl.setAttribute("aria-label", "조작 안내");
+    coachEl.style.cssText = "position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--pb) + 160px);width:min(360px,calc(100% - 28px));box-sizing:border-box;padding:12px 14px;z-index:60;";
+    coachEl.appendChild(el("div", "msec", st[0])); var tx = el("p", null, st[1]); tx.style.cssText = "margin:4px 0 10px;font-size:14px;line-height:1.5;"; coachEl.appendChild(tx);
+    var row = el("div", "mrow");
+    mbtn(row, "건너뛰기", coachDone);
+    mbtn(row, i === COACH_STEPS.length - 1 ? "시작하기" : "다음", function () { if (i === COACH_STEPS.length - 1) coachDone(); else showCoach(true, i + 1); }).classList.add("hot");
+    coachEl.appendChild(row); document.getElementById("toast").parentNode.appendChild(coachEl);
+  }
+  /* ===== version notice: version.txt next to the page holds the live build id; a different id means a newer page is out. ===== */
+  (function () {
+    var shown = false;
+    function check() {
+      if (shown || !/^https?:/.test(location.protocol) || !window.fetch) return;
+      var me = BUILD_ID; if (me.indexOf("%%") >= 0 || me === "?") return;
+      fetch("version.txt?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (t) {
+        t = (t || "").trim(); if (!/^[0-9]{4}-[0-9]{4}$/.test(t) || t === me || shown) return; shown = true;
+        var b = el("div", "glass"); b.style.cssText = "position:absolute;left:50%;transform:translateX(-50%);top:calc(var(--pt) + 56px);z-index:70;padding:8px 12px;display:flex;gap:8px;align-items:center;font-size:13px;";
+        b.appendChild(el("span", null, "새 버전이 나왔어요")); var rb = el("button", "btn hot", "새로고침"); rb.type = "button"; rb.addEventListener("click", function () { location.reload(); }); b.appendChild(rb);
+        var xb = el("button", "btn", "나중에"); xb.type = "button"; xb.addEventListener("click", function () { b.remove(); }); b.appendChild(xb);
+        document.getElementById("toast").parentNode.appendChild(b);
+      }).catch(function () { /* offline or not hosted: ignore */ });
+    }
+    setTimeout(check, 30000); setInterval(check, 600000);
+  })();
 
   /* ===== phone haptics: short vibration on game events (Android; iOS ignores it). Menu -> 진동 toggles it. ===== */
   (function () {
