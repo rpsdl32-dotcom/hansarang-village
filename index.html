@@ -32,6 +32,11 @@ body {
   font-family: var(--font-body); font-size: 14px; overflow: hidden;
   -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none;
 }
+html, body { overscroll-behavior: none; -webkit-touch-callout: none; touch-action: manipulation; }
+body.touch .mrow .btn { min-height: 40px; font-size: 13px; }
+body.touch .msec-h { min-height: 44px; }
+#perf { position: fixed; left: max(6px, env(safe-area-inset-left, 0px)); top: calc(env(safe-area-inset-top, 0px) + 4px); z-index: 80; pointer-events: none; font: 11px/1.35 ui-monospace, Menlo, Consolas, monospace; color: #bff7c8; background: rgba(0,0,0,0.55); padding: 4px 6px; border-radius: 6px; white-space: pre; }
+#ctxlost { position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center; background: rgba(14,22,42,0.92); color: #fff; text-align: center; padding: 24px; font-size: 15px; line-height: 1.6; }
 #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; z-index: 0; outline: none; }
 #tags { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; }
 .tag {
@@ -2315,13 +2320,13 @@ window.addEventListener("error", function (e) {
      so every multiplayer feature works for anyone with the link.
      ============================================================ */
   var HSV_SUPA = { url: "https://mdrrthfpdzjqrxfrojwf.supabase.co", key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kcnJ0aGZwZHpqcXJ4ZnJvandmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ1NzAyMTMsImV4cCI6MjExMDE0NjIxM30.2ACNQKsFkF6vuwoPsNH7p3yLZdfucu7uOU9c6lQBIRY", roomSize: 30 };
-  var BUILD_ID = "1121-0120";
+  var BUILD_ID = "1121-0134";
   var PUBLIC_MODE = /^https:\/\/.+\.supabase\.co/.test(HSV_SUPA.url) && HSV_SUPA.key.length > 20;
   if (PUBLIC_MODE) (function () {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1121-0120", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1121-0134", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) {
@@ -5155,8 +5160,8 @@ window.addEventListener("error", function (e) {
   try { var gl0 = localStorage.getItem("hsv_gfx"); if (gl0) { var gp = JSON.parse(gl0); GFX.level = gp.level; CAMS.fov = gp.fov || 55; } if (localStorage.getItem("hsv_gfx_v3") !== "1") { GFX.level = 3; localStorage.setItem("hsv_gfx_v3", "1"); } } catch (e) { /* storage unavailable */ }
   function applyGfx() {
     var dpr = window.devicePixelRatio || 1;
-    renderer.setPixelRatio(GFX.level === 0 ? 1 : GFX.level === 1 ? Math.min(dpr, 1.5) : GFX.level === 2 ? Math.min(dpr, 2) : Math.min(dpr, 3));
-    var big = (renderer.capabilities.maxTextureSize || 4096) >= 8192 ? 4096 : 2048;
+    renderer.setPixelRatio(GFX.level === 0 ? 1 : GFX.level === 1 ? Math.min(dpr, 1.5) : GFX.level === 2 ? Math.min(dpr, coarse ? 1.75 : 2) : Math.min(dpr, coarse ? 2 : 3));
+    var big = (renderer.capabilities.maxTextureSize || 4096) >= 8192 && !coarse ? 4096 : 2048;
     var want = GFX.level === 0 ? 0 : GFX.level === 1 ? 1024 : GFX.level === 2 ? 2048 : big;
     sun.castShadow = want > 0; sun.shadow.radius = GFX.level === 3 ? 3 : 1;
     renderer.shadowMap.type = GFX.level === 3 ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
@@ -5176,7 +5181,7 @@ window.addEventListener("error", function (e) {
     if (!AUTOQ.on || !started || document.hidden) return; AUTOQ.acc += dt || 0.016; AUTOQ.n++;
     if (AUTOQ.acc < 2) return; var fps = AUTOQ.n / AUTOQ.acc; AUTOQ.acc = 0; AUTOQ.n = 0;
     AUTOQ.low = fps < (GFX.level === 3 ? 18 : 24) ? AUTOQ.low + 1 : 0; // at '최고' only a really slow device (<18fps) steps down
-    if (AUTOQ.low >= 3 && GFX.level > 0) { GFX.level--; applyGfx(); AUTOQ.low = 0; toast("화질을 자동으로 낮췄어요", "평균 " + Math.round(fps) + "fps라서 '" + ["절약", "보통", "고화질", "최고"][GFX.level] + "'으로 바꿨어요. 메뉴 → 그래픽에서 바꿀 수 있어요."); }
+    if (AUTOQ.low >= 3 && GFX.level > 0) { GFX.level--; applyGfx(); AUTOQ.low = 0; AUTOQ.drops = (AUTOQ.drops || 0) + 1; toast("화질을 자동으로 낮췄어요", "평균 " + Math.round(fps) + "fps라서 '" + ["절약", "보통", "고화질", "최고"][GFX.level] + "'으로 바꿨어요. 메뉴 → 그래픽에서 바꿀 수 있어요."); }
   });
   function sensRow(label, key, min, max, step, fmt) {
     var l = pEl("label", "p-field", label + " · " + fmt(SENS[key])), r = el("input"); r.type = "range"; r.min = String(min); r.max = String(max); r.step = String(step); r.value = String(SENS[key]);
@@ -5189,6 +5194,12 @@ window.addEventListener("error", function (e) {
     sensRow("조이스틱 반응", "stick", 0.7, 1.6, 0.05, function (v) { return v.toFixed(2) + "배"; });
     sensRow("조이스틱 둔감 영역", "dead", 0, 0.25, 0.01, function (v) { return Math.round(v * 100) + "%"; });
     if (coarse && navigator.vibrate) { var hv = true; try { hv = localStorage.getItem("hsv_haptic") !== "0"; } catch (e) { /* ignore */ } var hb = bigBtn("진동: " + (hv ? "켜짐" : "꺼짐"), function () { var o = window.__haptic && window.__haptic(localStorage.getItem("hsv_haptic") === "0"); hb.textContent = "진동: " + (o ? "켜짐" : "꺼짐"); }); }
+    var pb = bigBtn("성능 표시 (FPS·메모리): " + (PERF.on ? "켜짐" : "꺼짐"), function () { perfSet(!PERF.on); pb.textContent = "성능 표시 (FPS·메모리): " + (PERF.on ? "켜짐" : "꺼짐"); });
+    bigBtn("성능 측정값 복사하기", function () {
+      var t = perfText(), done = function () { toast("복사했어요", "주영님께 붙여 넣어 보내 주세요."); };
+      try { if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(t).then(done, function () { window.prompt("복사해서 보내 주세요", t); }); return; } } catch (e) { /* fall through */ }
+      window.prompt("복사해서 보내 주세요", t);
+    });
     bigBtn("기본값으로 되돌리기", function () { SENS.cam = 1; SENS.stick = 1; SENS.dead = 0.08; saveSens(); reopen("ctrl"); });
     bigBtn("조작 안내 다시 보기", function () { closePanel(); setTimeout(function () { showCoach(true); }, 200); });
     pEl("p", "p-sum", "버전 " + BUILD_ID);
@@ -7827,6 +7838,38 @@ window.addEventListener("error", function (e) {
     }
     setTimeout(check, 30000); setInterval(check, 600000);
   })();
+
+  /* ===== phone hardening: lost GL context screen, no iOS pinch-zoom/long-press menu, screen wake lock, performance meter ===== */
+  (function () {
+    canvas.addEventListener("webglcontextlost", function (e) {
+      e.preventDefault(); if (document.getElementById("ctxlost")) return;
+      var d = el("div"); d.id = "ctxlost"; d.appendChild(el("div", null, "휴대폰이 그래픽을 잠시 멈췄어요.\n(메모리가 부족하거나 앱을 오래 떠났을 때 생겨요)")); d.firstChild.style.whiteSpace = "pre-line";
+      var b = el("button", "go", "다시 불러오기"); b.type = "button"; b.addEventListener("click", function () { location.reload(); }); d.appendChild(b); document.body.appendChild(d);
+    }, false);
+    ["gesturestart", "gesturechange", "gestureend"].forEach(function (n) { document.addEventListener(n, function (e) { e.preventDefault(); }, { passive: false }); });
+    canvas.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+    var st0 = document.getElementById("stick"); if (st0) st0.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+    var wl = null;
+    function wake() { try { if (!started || document.hidden || !navigator.wakeLock || wl) return; navigator.wakeLock.request("screen").then(function (l) { wl = l; l.addEventListener("release", function () { wl = null; }); }).catch(function () { /* not allowed */ }); } catch (e) { /* ignore */ } }
+    if (coarse) { document.addEventListener("visibilitychange", function () { if (!document.hidden) wake(); }); setInterval(wake, 20000); }
+  })();
+  var PERF = { on: false, buf: [], el: null, t: 0 };
+  try { if (/[?&]perf=1\b/.test(location.search) || localStorage.getItem("hsv_perf") === "1") PERF.on = true; } catch (e) { /* ignore */ }
+  function perfReport() {
+    var f = PERF.buf.slice().sort(function (a, b) { return a - b; }), n = f.length || 1, avg = f.reduce(function (a, b) { return a + b; }, 0) / n;
+    var p99 = f[Math.min(n - 1, Math.floor(n * 0.99))] || 0, ri = renderer.info, gl = renderer.getContext(), dbg = gl.getExtension("WEBGL_debug_renderer_info");
+    var gpu = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : "?", mem = performance && performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) + "MB" : "n/a";
+    return { build: BUILD_ID, fps: Math.round(1000 / (avg || 16.7)), low1: Math.round(1000 / (p99 || 16.7)), worstMs: Math.round(f[n - 1] || 0), calls: ri.render.calls, tris: ri.render.triangles, geos: ri.memory.geometries, tex: ri.memory.textures,
+      heap: mem, gfx: GFX.level, autoDrops: AUTOQ.drops || 0, dpr: renderer.getPixelRatio(), screen: innerWidth + "x" + innerHeight + "@" + (window.devicePixelRatio || 1), cores: navigator.hardwareConcurrency || "?", ram: navigator.deviceMemory || "?", gpu: gpu, ua: navigator.userAgent.replace(/\s+/g, " ").slice(0, 110), lib: window.__HSV_LIB || "?", zone: curZone ? curZone.id : "-" };
+  }
+  function perfText() { var r = perfReport(); return "한사랑 마을 성능 " + r.build + "\n" + "FPS 평균 " + r.fps + " / 하위1% " + r.low1 + " / 최악 프레임 " + r.worstMs + "ms\n" + "그리기 " + r.calls + "회 · 삼각형 " + r.tris.toLocaleString() + " · 지오메트리 " + r.geos + " · 텍스처 " + r.tex + "\n" + "화질 " + r.gfx + " (자동 하향 " + r.autoDrops + "회) · DPR " + r.dpr + " · 화면 " + r.screen + "\n" + "메모리 " + r.heap + " · 코어 " + r.cores + " · RAM " + r.ram + "GB\n" + "GPU " + r.gpu + "\n" + "장소 " + r.zone + " · " + r.ua; }
+  tickers.push(function (dt) {
+    if (!PERF.on || !started || document.hidden) return; PERF.buf.push((dt || 0.016) * 1000); if (PERF.buf.length > 600) PERF.buf.shift();
+    PERF.t += dt; if (PERF.t < 0.5) return; PERF.t = 0; if (!PERF.el) { PERF.el = el("div"); PERF.el.id = "perf"; document.body.appendChild(PERF.el); }
+    var r = perfReport(); PERF.el.textContent = r.fps + " fps (low " + r.low1 + ") · 최악 " + r.worstMs + "ms\n그리기 " + r.calls + " · 삼각형 " + Math.round(r.tris / 1000) + "k\n메모리 " + r.heap + " · 화질 " + r.gfx + " · DPR " + r.dpr;
+  });
+  function perfSet(on) { PERF.on = !!on; PERF.buf = []; try { localStorage.setItem("hsv_perf", on ? "1" : "0"); } catch (e) { /* ignore */ } if (!on && PERF.el) { PERF.el.remove(); PERF.el = null; } }
+  window.__perf = { report: perfReport, text: perfText, set: perfSet };
 
   /* ===== phone haptics: short vibration on game events (Android; iOS ignores it). Menu -> 진동 toggles it. ===== */
   (function () {
