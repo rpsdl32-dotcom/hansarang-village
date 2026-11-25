@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>교회 정보 입력 도우미</title>
+<style>
+:root{color-scheme:light dark;--bg:#f3f6fa;--ink:#0f1b33;--card:#fff;--line:#cbd3e1;--blue:#1f4fd8}
+@media(prefers-color-scheme:dark){:root{--bg:#10162a;--ink:#eef2fb;--card:#1a2340;--line:#344063;--blue:#7da2ff}}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,"Noto Sans KR",sans-serif;padding:16px;max-width:680px;margin-inline:auto}
+h1{font-size:22px;margin:8px 0}p.s{margin:0 0 14px;opacity:.8;font-size:14px}
+label{display:block;margin:14px 0 4px;font-weight:700;font-size:14px}small{font-weight:400;opacity:.7}
+textarea,input{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;background:var(--card);color:inherit}
+button{margin-top:16px;width:100%;min-height:48px;border:0;border-radius:12px;background:var(--blue);color:#fff;font:700 16px inherit;cursor:pointer}
+pre{white-space:pre-wrap;word-break:break-all;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:13px}
+.n{float:right;font-weight:400;opacity:.6}
+</style></head><body>
+<h1>교회 정보 입력 도우미</h1>
+<p class="s">빈칸은 비워 두세요. 다 쓰고 맨 아래 <b>복사</b>를 눌러 주영님께 보내 주시면 한사랑 마을에 반영됩니다. 이 페이지는 아무것도 저장·전송하지 않습니다.</p>
+<div id="f"></div>
+<button id="b" type="button">복사 (보낼 내용 만들기)</button>
+<pre id="o" aria-live="polite"></pre>
+<script>
+var F=[["times","예배 시간과 장소",300,"예) 주일 오전 11:00 · 본당"],["route","위치와 찾아오는 길",300,""],["reg","새가족 등록 안내",300,""],["contact","문의 방법",300,""],["events","교회 행사 일정",300,""],["tips","처음 방문할 때 알아두면 좋은 점",300,""],["news","주보 · 교회 소식",400,""],["week","주보 · 주간 일정",400,""],["sched","예배 시간표 (한 줄에 하나: 예배 이름 | 요일 | 시:분)",400,"주일 오전 예배 | 일 | 11:00"]];
+var f=document.getElementById("f");
+F.forEach(function(x){var l=document.createElement("label");l.textContent=x[1];var n=document.createElement("span");n.className="n";l.appendChild(n);var t=document.createElement("textarea");t.rows=x[0]==="sched"?4:3;t.maxLength=x[2];t.placeholder=x[3];t.id="f_"+x[0];t.addEventListener("input",function(){n.textContent=t.value.length+"/"+x[2]});f.appendChild(l);f.appendChild(t)});
+document.getElementById("b").onclick=function(){
+ var v=function(k){return document.getElementById("f_"+k).value.trim()};
+ var d=new Date(),z=function(n){return String(n).padStart(2,"0")};
+ var j={updated:d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate()),guide:{times:v("times"),route:v("route"),reg:v("reg"),contact:v("contact"),events:v("events"),tips:v("tips")},news:v("news"),week:v("week"),sched:v("sched")};
+ var s=JSON.stringify(j,null,2);document.getElementById("o").textContent=s;
+ try{navigator.clipboard.writeText(s).then(function(){alert("복사했어요. 카톡으로 주영님께 붙여 넣어 보내 주세요.")},function(){})}catch(e){}
+};
+</script></body></html>

@@ -2320,13 +2320,13 @@ window.addEventListener("error", function (e) {
      so every multiplayer feature works for anyone with the link.
      ============================================================ */
   var HSV_SUPA = { url: "https://mdrrthfpdzjqrxfrojwf.supabase.co", key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kcnJ0aGZwZHpqcXJ4ZnJvandmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ1NzAyMTMsImV4cCI6MjExMDE0NjIxM30.2ACNQKsFkF6vuwoPsNH7p3yLZdfucu7uOU9c6lQBIRY", roomSize: 30 };
-  var BUILD_ID = "1126-0145";
+  var BUILD_ID = "1126-0149";
   var PUBLIC_MODE = /^https:\/\/.+\.supabase\.co/.test(HSV_SUPA.url) && HSV_SUPA.key.length > 20;
   if (PUBLIC_MODE) (function () {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1126-0145", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1126-0149", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) {
@@ -4414,12 +4414,28 @@ window.addEventListener("error", function (e) {
   var GUIDE_KEYS = [["times", "예배 시간과 장소"], ["route", "위치와 찾아오는 길"], ["reg", "새가족 등록 안내"], ["contact", "문의 방법"], ["events", "교회 행사 일정"], ["tips", "처음 방문할 때 알아두면 좋은 점"]];
   SV.guide = {};
   try { var rgd = JSON.parse(localStorage.getItem("hansarang-guide-v1") || "null"); if (rgd) GUIDE_KEYS.forEach(function (k) { SV.guide[k[0]] = cleanText(rgd[k[0]], 300); }); } catch (e) { /* ignore */ }
+  /* church.json (next to the page): church info every visitor sees. Anything the operator saved on this device still wins. */
+  var CHURCH_DATA = { updated: "" };
+  (function () {
+    if (!/^https?:/.test(location.protocol) || !window.fetch) return;
+    fetch("church.json?v=" + encodeURIComponent(BUILD_ID), { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      if (!j || typeof j !== "object") return;
+      CHURCH_DATA.updated = cleanText(j.updated, 20);
+      var g = j.guide && typeof j.guide === "object" ? j.guide : {};
+      GUIDE_KEYS.forEach(function (k) { if (!SV.guide[k[0]] && g[k[0]]) SV.guide[k[0]] = cleanText(g[k[0]], 300); });
+      if (!SV.news && j.news) SV.news = cleanText(j.news, 400);
+      if (!SV.week && j.week) SV.week = cleanText(j.week, 400);
+      if (!SV.sched && j.sched) SV.sched = String(j.sched).replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, "").slice(0, 400);
+    }).catch(function () { /* offline or no file: keep defaults */ });
+  })();
   PANEL_CHIP.guide = "새가족 안내"; PANEL_CHIP.album = "사진 앨범"; PANEL_CHIP.daily = "오늘";
   EXTRA_PANELS.guide = function (add, rows, photo) {
     head("Welcome", "처음 오셨나요?", "목포한사랑교회(대한예수교장로회)에 오신 것을 환영합니다.");
     photo(PHOTO.church, "목포한사랑교회와 아셀카페");
     rows(GUIDE_KEYS.map(function (k) { return [k[1], SV.guide[k[0]] || "아직 등록되지 않았습니다"]; }));
-    pEl("p", "p-sum", "안내 내용은 교회 운영자가 운영자 설정에서 입력합니다.");
+    pEl("p", "p-sum", CHURCH_DATA.updated ? "안내 내용 최종 수정: " + CHURCH_DATA.updated : "안내 내용은 교회 운영자가 입력합니다.");
+    bigBtn("지도에서 찾기 (네이버 지도)", function () { window.open("https://map.naver.com/p/search/" + encodeURIComponent("목포한사랑교회"), "_blank", "noopener"); });
+    bigBtn("지도에서 찾기 (카카오맵)", function () { window.open("https://map.kakao.com/?q=" + encodeURIComponent("목포한사랑교회"), "_blank", "noopener"); });
     bigBtn("마을 둘러보기 순서 보기", function () { openPanel("foru"); });
     if (CHURCH.worshipVideo) { var a = pEl("a", "p-link", "교회 영상 보기 ↗"); a.href = CHURCH.worshipVideo; a.target = "_blank"; a.rel = "noopener"; }
   };
