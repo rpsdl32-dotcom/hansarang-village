@@ -1,4 +1,4 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="한사랑 마을"><meta name="theme-color" content="#1b2440"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no"><style>html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#1b2440;}</style></head><body><title>한사랑 마을</title>
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="한사랑 마을"><meta name="theme-color" content="#1b2440"><meta name="description" content="목포한사랑교회 3D 마을 탐험 — 폰으로 바로 들어와 걷고, 놀고, 친구와 만나요."><link rel="canonical" href="https://rpsdl32-dotcom.github.io/hansarang-village/"><meta property="og:type" content="website"><meta property="og:site_name" content="한사랑 마을"><meta property="og:title" content="한사랑 마을 · 목포한사랑교회 3D 마을"><meta property="og:description" content="폰으로 바로 들어와 걷고, 놀고, 친구와 만나요. 앱 설치 없이 열려요."><meta property="og:url" content="https://rpsdl32-dotcom.github.io/hansarang-village/"><meta property="og:image" content="https://rpsdl32-dotcom.github.io/hansarang-village/og.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="ko_KR"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="한사랑 마을"><meta name="twitter:description" content="목포한사랑교회 3D 마을 — 폰으로 바로 들어와요."><meta name="twitter:image" content="https://rpsdl32-dotcom.github.io/hansarang-village/og.jpg"><link rel="icon" type="image/png" href="icon-192.png"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="manifest" href="manifest.webmanifest"><title>한사랑 마을 · 목포한사랑교회 3D 마을</title><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no"><style>html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#1b2440;}</style></head><body><title>한사랑 마을</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2320,13 +2320,13 @@ window.addEventListener("error", function (e) {
      so every multiplayer feature works for anyone with the link.
      ============================================================ */
   var HSV_SUPA = { url: "https://mdrrthfpdzjqrxfrojwf.supabase.co", key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kcnJ0aGZwZHpqcXJ4ZnJvandmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ1NzAyMTMsImV4cCI6MjExMDE0NjIxM30.2ACNQKsFkF6vuwoPsNH7p3yLZdfucu7uOU9c6lQBIRY", roomSize: 30 };
-  var BUILD_ID = "1121-0134";
+  var BUILD_ID = "1126-0145";
   var PUBLIC_MODE = /^https:\/\/.+\.supabase\.co/.test(HSV_SUPA.url) && HSV_SUPA.key.length > 20;
   if (PUBLIC_MODE) (function () {
     // one guest id PER TAB (sessionStorage): two tabs/webviews of the same browser used to share one id and hid each other
     var myId = null;
     try { myId = sessionStorage.getItem("hsv_tab_pid"); if (!myId) { myId = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); sessionStorage.setItem("hsv_tab_pid", myId); } } catch (e) { myId = "p" + Math.random().toString(36).slice(2, 12); }
-    var D = window.HSV_DIAG = { build: "1121-0134", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
+    var D = window.HSV_DIAG = { build: "1126-0145", project: (HSV_SUPA.url.match(/https:\/\/([a-z0-9]+)\./) || [])[1] || "?", lib: "loading", socket: "-", channel: "-", room: "-", myId: myId, presence: 0, cap: HSV_SUPA.roomSize,
       sent: 0, recv: 0, lastRecv: 0, tracks: 0, trackFail: 0, errors: [], reconnects: 0, latency: -1, joinedAt: 0, problem: "" };
     function err(code, msg) { D.errors.unshift(new Date().toLocaleTimeString() + " " + code + (msg ? " · " + msg : "")); D.errors.length = Math.min(D.errors.length, 8); D.problem = code; }
     function loadLib() { return new Promise(function (res, rej) {
@@ -5156,6 +5156,24 @@ window.addEventListener("error", function (e) {
   });
 
   // ---- graphics presets (low / mid / high), field of view
+  /* distance culling: skip meshes that would cover only a few pixels (phones only; desktop keeps everything). Works inside three's own frustum test, so the shadow pass skips them too. */
+  var DC = { k: 0, base: 0 };
+  try { var dcq = /[?&]dc=([0-9.]+)/.exec(location.search); DC.base = dcq ? Number(dcq[1]) : 0; } catch (e) { DC.base = 0; }
+  (function () {
+    var orig = THREE.Frustum.prototype.intersectsObject, c = new THREE.Vector3(), sc = new THREE.Vector3();
+    THREE.Frustum.prototype.intersectsObject = function (o) {
+      if (!orig.call(this, o)) return false;
+      if (DC.k <= 0 || !o.isMesh || o.isInstancedMesh || o.isSkinnedMesh || o.userData.nodc) return true;
+      var g = o.geometry, bs = g && g.boundingSphere; if (!bs) return true;
+      var e = o.matrixWorld.elements; sc.set(e[0], e[1], e[2]); var sx = sc.length(); sc.set(e[4], e[5], e[6]); var sy = sc.length(); sc.set(e[8], e[9], e[10]); var sz = sc.length();
+      var r = bs.radius * Math.max(sx, sy, sz); if (r > 6) return true;
+      c.copy(bs.center).applyMatrix4(o.matrixWorld);
+      var dx = c.x - DC.cx, dy = c.y - DC.cy, dz = c.z - DC.cz, d2 = dx * dx + dy * dy + dz * dz;
+      return !(d2 > 400 && r * r < DC.k * DC.k * d2);
+    };
+  })();
+  var SHADOWT = { n: 0, every: 1, force: 0 };
+  try { SHADOWT.every = coarse && localStorage.getItem("hsv_shadowt") === "3" ? 3 : 1; } catch (e) { SHADOWT.every = 1; }
   var GFX = { level: 3 }; // default: best quality on every device (user request); the menu can step it down
   try { var gl0 = localStorage.getItem("hsv_gfx"); if (gl0) { var gp = JSON.parse(gl0); GFX.level = gp.level; CAMS.fov = gp.fov || 55; } if (localStorage.getItem("hsv_gfx_v3") !== "1") { GFX.level = 3; localStorage.setItem("hsv_gfx_v3", "1"); } } catch (e) { /* storage unavailable */ }
   function applyGfx() {
@@ -5171,6 +5189,7 @@ window.addEventListener("error", function (e) {
     fxLevel = GFX.level === 0 ? 0 : GFX.level === 1 ? 1 : 2;
     scene.traverse(function (o) { if (o.isMesh && o.material && o.material.map && o.material.map.anisotropy !== undefined) { var a = GFX.level === 3 ? Math.min(16, renderer.capabilities.getMaxAnisotropy()) : MAXANISO; if (o.material.map.anisotropy !== a) { o.material.map.anisotropy = a; o.material.map.needsUpdate = true; } } });
     if (typeof IBL !== "undefined") { IBL.key = ""; applyEnv(); }
+    SHADOWT.force = 3;
     try { localStorage.setItem("hsv_gfx", JSON.stringify({ level: GFX.level, fov: CAMS.fov })); } catch (e) { /* storage unavailable */ }
   }
   applyGfx();
@@ -6041,7 +6060,7 @@ window.addEventListener("error", function (e) {
     return { open: open, close: close, state: S, roll: roll, totals: totals };
   })();
   if (/[?&]diag=hansarang\b/.test(location.search)) window.__bowl = BOWL;
-  if (/[?&]diag=hansarang\b/.test(location.search)) { window.__van = function () { return VAN; }; window.__tickers = tickers; window.__drive = function () { enterVan(); }; window.__tp = function (x, z, y, f) { player.x = x; player.z = z; player.y = y || 0; player.face = f || 0; cam.yaw = player.face; snapCam = true; }; window.__geo = { SANCT: SANCT, Y2: Y2 }; window.__scene = scene; window.__cam = camera; window.__T = THREE; window.__race = { start: startRace, back: backToTown, get R() { return RACE; }, get VAN() { return VAN; }, applyVeh: function (i) { return applyVeh(i); } }; window.__av = function (k, v) { G.av[k] = v; rebuildAvatar(); }; window.__lead = function (i) { leadSpeak(i); return LEAD[i] ? LEAD[i].length : 0; }; window.__wk = { list: wkList, key: wkKey, ev: wkEvent, st: wkState, sun: sundayStamp, T: TITLES }; window.__duel = { get D() { return DUEL; }, onMsg: duelOnMsg, invite: duelInvite, answer: duelAnswer, qs: duelQs }; window.__rank = { R: RANK, submit: rankSubmit, load: rankLoad, bests: rankBests }; window.__mem = { start: memStart, get M() { return MEM; } }; window.__resume = { make: rcMake, parse: rcParse }; window.__film = { get TOUR() { return TOUR; }, get PRO() { return PRO; }, get mode() { return mode; } }; window.__chat = { mask: mask, clean: isClean, line: chatLine, send: sendChat, report: reportPeer, NET: NET, peers: function () { return NET.peers; } }; }
+  if (/[?&]diag=hansarang\b/.test(location.search)) { window.__van = function () { return VAN; }; window.__tickers = tickers; window.__drive = function () { enterVan(); }; window.__tp = function (x, z, y, f) { player.x = x; player.z = z; player.y = y || 0; player.face = f || 0; cam.yaw = player.face; snapCam = true; }; window.__geo = { SANCT: SANCT, Y2: Y2 }; window.__renderer = renderer; window.__dc = DC; window.__shadowt = SHADOWT; window.__scene = scene; window.__cam = camera; window.__T = THREE; window.__race = { start: startRace, back: backToTown, get R() { return RACE; }, get VAN() { return VAN; }, applyVeh: function (i) { return applyVeh(i); } }; window.__av = function (k, v) { G.av[k] = v; rebuildAvatar(); }; window.__lead = function (i) { leadSpeak(i); return LEAD[i] ? LEAD[i].length : 0; }; window.__wk = { list: wkList, key: wkKey, ev: wkEvent, st: wkState, sun: sundayStamp, T: TITLES }; window.__duel = { get D() { return DUEL; }, onMsg: duelOnMsg, invite: duelInvite, answer: duelAnswer, qs: duelQs }; window.__rank = { R: RANK, submit: rankSubmit, load: rankLoad, bests: rankBests }; window.__mem = { start: memStart, get M() { return MEM; } }; window.__resume = { make: rcMake, parse: rcParse }; window.__film = { get TOUR() { return TOUR; }, get PRO() { return PRO; }, get mode() { return mode; } }; window.__chat = { mask: mask, clean: isClean, line: chatLine, send: sendChat, report: reportPeer, NET: NET, peers: function () { return NET.peers; } }; }
   EXTRA_ACTIONS.bowling = function () {
     var d = new Date(), day = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
     if (G.bowlVisit !== day) { G.bowlVisit = day; saveG(); gain(10, 10); }
@@ -7326,6 +7345,7 @@ window.addEventListener("error", function (e) {
     var top = el("div", "mrow"); menu.appendChild(top);
     var wk = mbtn(top, "★ 이번 주 미션", mpanel("weekly")); wk.classList.add("hot");
     mbtn(top, "조작 설정", mpanel("ctrl"));
+    mbtn(top, "공유 · QR", mpanel("share"));
     msection("play", "놀이", function (box) {
       var r1 = el("div", "mrow"); box.appendChild(r1);
       mbtn(r1, "미션", click("btn-mission")); mbtn(r1, "상점", click("btn-shop")); mbtn(r1, "오늘", mpanel("daily")); mbtn(r1, "코믹", function () { document.getElementById("btn-comic").click(); buildMenu(); }, comic);
@@ -7355,6 +7375,7 @@ window.addEventListener("error", function (e) {
       DEST.filter(function (d) { return d.n.charAt(0) !== "T"; }).forEach(function (d) { var b = el("button", "menu-item"); b.type = "button"; b.appendChild(el("span", null, d.n)); b.appendChild(el("small", null, "이동")); b.addEventListener("click", function () { toggleMenu(false); teleport(d); }); box.appendChild(b); });
     });
     msection("more", "안내 · 운영", function (box) {
+      mitem(box, "친구에게 공유 · QR · 홈 화면 추가", mpanel("share"));
       mitem(box, "새가족 안내", mpanel("guide"));
       mitem(box, "조작 안내 다시 보기", function () { toggleMenu(false); showCoach(true); });
       mitem(box, "운영자 설정", mpanel("admin"));
@@ -7714,8 +7735,14 @@ window.addEventListener("error", function (e) {
     sky.position.copy(camera.position); stars.position.copy(camera.position);
 
     // sun follows the player
+    // phones redraw the shadow map only every few frames (the shadow pass re-draws every shadow caster; it is the biggest single cost); the sun moves together with it so nothing swims
+    DC.cx = camera.position.x; DC.cy = camera.position.y; DC.cz = camera.position.z; DC.k = DC.base * (GFX.level === 0 ? 1.8 : GFX.level === 1 ? 1.3 : 1);
+    SHADOWT.n++; var shUp = SHADOWT.every <= 1 || SHADOWT.n % SHADOWT.every === 0 || SHADOWT.force > 0; if (SHADOWT.force > 0) SHADOWT.force--;
+    renderer.shadowMap.autoUpdate = SHADOWT.every <= 1; if (SHADOWT.every > 1) renderer.shadowMap.needsUpdate = shUp;
+    if (shUp) {
     sun.position.set(player.x + env.dir.x * 90, player.y + env.dir.y * 90, player.z + env.dir.z * 90);
     sun.target.position.set(player.x, player.y, player.z); sun.target.updateMatrixWorld();
+    }
     stepEnv(dt);
     stepDoors(dt);
 
@@ -7796,6 +7823,36 @@ window.addEventListener("error", function (e) {
   $("#go-friends").addEventListener("click", function () { started || enterWorld("go"); setTimeout(function () { openPanel("friends"); }, 350); });
   setTimeout(function () { try { go.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 50);
 
+  /* ===== share + install: QR code (pre-computed for the live address), link copy, native share sheet, add-to-home-screen help ===== */
+  var SITE_URL = "https://rpsdl32-dotcom.github.io/hansarang-village/";
+  var QR_ROWS = ["111111100100100000111011101111111", "100000100001000100101100101000001", "101110101111101000011110001011101", "101110101100100100110011101011101", "101110101100011111001101001011101", "100000101110011000010000101000001", "111111101010101010101010101111111", "000000001110000010011111000000000", "101111100111111001110000101111100", "010000011001110011111011001101101", "011011111111011111001110100010110", "100101011001110111110100001011111", "001001100100001110000010010011011", "100010000001100101100101001000011", "001010101100000111001000011000110", "110101000111111100111100011101100", "100110100001100111010001110110001", "101001011100110010111001011101101", "110000100000011100100110000110100", "110010010110111100001101110111111", "110111111010101000100010110111011", "110010011111011110010001101000101", "101011100001100001001110000011110", "101001001010011010001111001101111", "110101111100011001001010111110000", "000000001100010011111101100010101", "111111100001111101001101101010110", "100000101010011111111111100011110", "101110101010101110010010111111001", "101110101101010101111100110011011", "101110101010010110101110111100000", "100000100101100100011100011011100", "111111101110110111000011101101010"];
+  var installEvt = null;
+  window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); installEvt = e; });
+  window.addEventListener("appinstalled", function () { installEvt = null; });
+  function isStandalone() { try { return (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true; } catch (e) { return false; } }
+  function qrCanvas(px) {
+    var n = QR_ROWS.length, q = 4, m = Math.floor(px / (n + 2 * q)), c = el("canvas"); c.width = c.height = m * (n + 2 * q); c.style.cssText = "display:block;margin:6px auto;border-radius:10px;max-width:100%;image-rendering:pixelated;background:#fff";
+    c.setAttribute("role", "img"); c.setAttribute("aria-label", "한사랑 마을 주소 QR 코드");
+    var g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.fillStyle = "#000";
+    for (var y = 0; y < n; y++) for (var x = 0; x < n; x++) if (QR_ROWS[y].charAt(x) === "1") g.fillRect((x + q) * m, (y + q) * m, m, m);
+    return c;
+  }
+  function copyText(t, ok) {
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(t).then(ok, function () { window.prompt("복사해서 붙여 넣으세요", t); }); return; } } catch (e) { /* fall through */ }
+    window.prompt("복사해서 붙여 넣으세요", t);
+  }
+  PANEL_CHIP.share = "공유";
+  EXTRA_PANELS.share = function (add, rows) {
+    head("Share", "친구에게 알리기", "QR을 보여 주거나 링크를 보내면 앱 설치 없이 바로 들어와요.");
+    var box = el("div"); box.appendChild(qrCanvas(264)); var cap = el("p", "p-sum", "폰 카메라로 찍으면 열려요"); cap.style.textAlign = "center"; box.appendChild(cap); add(box);
+    bigBtn("링크 복사", function () { copyText(SITE_URL, function () { toast("복사했어요", "카톡이나 문자에 붙여 넣어 보내세요."); }); });
+    if (navigator.share) bigBtn("공유하기 (카톡 · 문자 등)", function () { navigator.share({ title: "한사랑 마을", text: "목포한사랑교회 3D 마을에 놀러 와요!", url: SITE_URL }).catch(function () { /* cancelled */ }); });
+    if (!isStandalone()) {
+      var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      if (installEvt) bigBtn("홈 화면에 추가", function () { var e = installEvt; installEvt = null; e.prompt(); e.userChoice.then(function () { reopen("share"); }); });
+      else pEl("p", "p-sum", ios ? "홈 화면에 추가: Safari 아래쪽 공유 버튼(□↑)을 누르고 '홈 화면에 추가'를 고르세요. 앱처럼 전체 화면으로 열려요." : "홈 화면에 추가: 브라우저 오른쪽 위 메뉴(⋮)에서 '홈 화면에 추가' 또는 '앱 설치'를 고르세요.");
+    } else pEl("p", "p-sum", "이미 홈 화면 앱으로 열려 있어요.");
+  };
   /* ===== first-visit coach: 4 short cards (move / look / act / menu). Shown once; menu -> 조작 안내 다시 보기 replays it. ===== */
   var COACH_STEPS = coarse ? [
     ["1 / 4 · 걷기", "왼쪽 아래 둥근 조이스틱을 밀어 보세요. 끝까지 밀면 달려요.", "stick"],
